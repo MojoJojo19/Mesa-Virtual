@@ -1,0 +1,145 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --color-background-primary: #121212;
+  --color-background-secondary: #1e1e1e;
+  --color-border-primary: #444;
+  --color-border-secondary: #666;
+  --color-border-tertiary: #333;
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #bbbbbb;
+  --color-text-tertiary: #888888;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-background-primary);
+  color: var(--color-text-primary);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+/* Contenedor simulando la pantalla del celular */
+.app-container {
+  width: 100%;
+  max-width: 400px;
+  min-height: 100vh;
+  background-color: var(--color-background-secondary);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+@media (min-width: 450px) {
+  .app-container {
+    min-height: 800px;
+    border-radius: 24px;
+    border: 1px solid var(--color-border-primary);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    margin: 20px 0;
+  }
+}
+
+/* Elementos comunes del mockup */
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border-tertiary);
+  margin-bottom: 20px;
+}
+
+.mesa-badge {
+  font-size: 11px;
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 8px;
+  padding: 2px 8px;
+  color: var(--color-text-secondary);
+}
+
+.title-main {
+  font-size: 20px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 5px;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.wf-block {
+  border: 1px solid var(--color-border-tertiary);
+  border-radius: 12px;
+  padding: 15px;
+  background-color: var(--color-background-primary);
+  margin-bottom: 15px;
+}
+
+.wf-label {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin-bottom: 6px;
+  display: block;
+}
+
+.wf-input {
+  width: 100%;
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 8px;
+  padding: 12px;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+}
+.wf-input:focus {
+  border-color: var(--color-text-secondary);
+}
+
+.wf-btn-solid {
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 14px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-background-primary);
+  background-color: var(--color-text-primary);
+  cursor: pointer;
+  margin-top: auto;
+  transition: opacity 0.2s;
+}
+.wf-btn-solid:hover {
+  opacity: 0.9;
+}
+.wf-btn-outline {
+  width: 100%;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 10px;
+  padding: 14px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  background-color: transparent;
+  cursor: pointer;
+}
