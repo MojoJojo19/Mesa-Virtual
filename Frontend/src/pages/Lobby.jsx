@@ -63,7 +63,7 @@ export default function Lobby() {
               onClick={handleCopiar}
               style={{ fontSize: '11px', padding: '4px 10px' }}
             >
-              {copiado ? '✓ Copiado' : '📋 Copiar'}
+              {copiado ? '✓ Copiado' : 'Copiar'}
             </button>
           </div>
           <div

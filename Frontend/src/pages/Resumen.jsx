@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { Smartphone, CreditCard, Banknote } from 'lucide-react'
 
 const METODOS_PAGO = [
-  { id: 'yape', label: 'Yape / Plin', sub: 'Pago instantáneo por QR', icon: '📱' },
-  { id: 'tarjeta', label: 'Tarjeta', sub: 'Visa, Mastercard', icon: '💳' },
-  { id: 'efectivo', label: 'Efectivo en caja', sub: 'El mesero traerá el vuelto', icon: '💵' }
+  { id: 'yape', label: 'Yape / Plin', sub: 'Pago instantáneo por QR', icon: <Smartphone size={18} /> },
+  { id: 'tarjeta', label: 'Tarjeta', sub: 'Visa, Mastercard', icon: <CreditCard size={18} /> },
+  { id: 'efectivo', label: 'Efectivo en caja', sub: 'El mesero traerá el vuelto', icon: <Banknote size={18} /> }
 ]
 
 export default function Resumen() {
@@ -171,7 +172,9 @@ export default function Resumen() {
             onClick={() => setMetodoPago(m.id)}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
-              <span style={{ fontSize: '18px' }}>{m.icon}</span>
+              <span style={{ display: 'flex', alignItems: 'center', color: metodoPago === m.id ? 'var(--color-accent)' : 'var(--color-text-secondary)' }}>
+                {m.icon}
+              </span>
               <div>
                 <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-text-primary)' }}>{m.label}</div>
                 <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginTop: '1px' }}>{m.sub}</div>

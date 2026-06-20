@@ -1,5 +1,6 @@
 import React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { Camera } from 'lucide-react'
 
 // QR simulado con patrón visual
 function QRSimulado({ mesa }) {
@@ -44,7 +45,7 @@ export default function Bienvenida() {
         <div className="wf-block text-center" style={{ marginBottom: '16px' }}>
           <div className="wf-label" style={{ textAlign: 'center' }}>Restaurante</div>
           <div style={{ fontSize: '18px', fontWeight: '700', color: 'var(--color-text-primary)', marginBottom: '4px' }}>
-            La Fogata Grill 🔥
+            La Fogata Grill
           </div>
           <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
             Mesa número {idMesa}
@@ -59,7 +60,9 @@ export default function Bienvenida() {
 
         {/* Info acceso */}
         <div className="wf-block" style={{ textAlign: 'center', marginBottom: '16px' }}>
-          <div style={{ fontSize: '22px', marginBottom: '8px' }}>📷</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px', color: 'var(--color-text-secondary)' }}>
+            <Camera size={24} />
+          </div>
           <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '4px' }}>
             Sin app · Solo tu cámara
           </div>

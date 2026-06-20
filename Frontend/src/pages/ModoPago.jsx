@@ -1,24 +1,25 @@
 import React, { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { User, Divide, Crown } from 'lucide-react'
 
 const MODOS = [
   {
     id: 'individual',
     titulo: 'Pago individual',
     sub: 'Cada uno paga lo suyo',
-    icon: '👤'
+    icon: <User size={20} />
   },
   {
     id: 'partes_iguales',
     titulo: 'Dividir en partes iguales',
     sub: 'Total entre todos',
-    icon: '➗'
+    icon: <Divide size={20} />
   },
   {
     id: 'lider',
     titulo: 'Asumir como líder',
     sub: 'Yo pago el total de la mesa',
-    icon: '👑'
+    icon: <Crown size={20} />
   }
 ]
 
@@ -67,7 +68,9 @@ export default function ModoPago() {
               onClick={() => setModoSeleccionado(modo.id)}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
-                <span style={{ fontSize: '20px' }}>{modo.icon}</span>
+                <span style={{ display: 'flex', alignItems: 'center', color: modoSeleccionado === modo.id ? 'var(--color-accent)' : 'var(--color-text-secondary)' }}>
+                  {modo.icon}
+                </span>
                 <div>
                   <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-text-primary)' }}>
                     {modo.titulo}

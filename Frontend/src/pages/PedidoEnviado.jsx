@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { llamarMesero } from '../services/api'
 import { useToast } from '../components/Toast'
+import { Bell, FileText, Plus } from 'lucide-react'
 
 // Timer visual circular animado
 function TimerCirculo({ minutos }) {
@@ -60,7 +61,7 @@ export default function PedidoEnviado() {
 
   const handleLlamarMesero = async () => {
     if (meseroLlamado) {
-      toast('Ya llamaste al mesero, está en camino 👋', 'info')
+      toast('Ya llamaste al mesero, está en camino', 'info')
       return
     }
     await llamarMesero(idMesa)
@@ -71,7 +72,7 @@ export default function PedidoEnviado() {
 
   const handleSolicitarCuenta = () => {
     setCuentaSolicitada(true)
-    toast('Cuenta solicitada, te la llevamos a la mesa 🧾', 'success')
+    toast('Cuenta solicitada, te la llevamos a la mesa', 'success')
     setTimeout(() => navigate(`/mesa/${idMesa}/resumen`), 1500)
   }
 
@@ -122,7 +123,9 @@ export default function PedidoEnviado() {
           style={meseroLlamado ? { borderColor: 'var(--color-accent)', background: 'var(--color-accent-dim)' } : {}}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
-            <div className="asistencia-icon">👋</div>
+            <div className="asistencia-icon" style={{ color: meseroLlamado ? 'var(--color-accent)' : 'var(--color-text-secondary)' }}>
+              <Bell size={18} />
+            </div>
             <div>
               <div style={{ fontSize: '13px', fontWeight: '600', color: meseroLlamado ? 'var(--color-accent)' : 'var(--color-text-primary)' }}>
                 {meseroLlamado ? '¡Mesero en camino!' : 'Llamar al mesero'}
@@ -140,7 +143,9 @@ export default function PedidoEnviado() {
           style={cuentaSolicitada ? { borderColor: 'var(--color-success)', background: 'var(--color-success-dim)' } : {}}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
-            <div className="asistencia-icon">🧾</div>
+            <div className="asistencia-icon" style={{ color: cuentaSolicitada ? 'var(--color-success)' : 'var(--color-text-secondary)' }}>
+              <FileText size={18} />
+            </div>
             <div>
               <div style={{ fontSize: '13px', fontWeight: '600', color: cuentaSolicitada ? 'var(--color-success)' : 'var(--color-text-primary)' }}>
                 {cuentaSolicitada ? 'Preparando tu cuenta...' : 'Solicitar la cuenta'}
@@ -157,7 +162,9 @@ export default function PedidoEnviado() {
           onClick={() => navigate(`/mesa/${idMesa}/menu`)}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
-            <div className="asistencia-icon">➕</div>
+            <div className="asistencia-icon" style={{ color: 'var(--color-text-secondary)' }}>
+              <Plus size={18} />
+            </div>
             <div>
               <div style={{ fontSize: '13px', fontWeight: '600' }}>Agregar más platos</div>
               <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>Volver al menú</div>

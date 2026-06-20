@@ -1,4 +1,4 @@
-# SwiftTable - Mesa Virtual 🍽️📱
+# SwiftTable - Mesa Virtual
 
 **SwiftTable** es una plataforma digital de "Mesa Virtual" diseñada para mejorar y agilizar la experiencia de los comensales en restaurantes. Permite a los clientes escanear un código QR en su mesa física, ingresar de forma segura a una sesión grupal mediante un PIN, elegir su método de pago preferido, realizar pedidos individuales y grupales de forma interactiva, y llamar al mesero directamente desde su smartphone.
 
@@ -6,7 +6,7 @@ El proyecto está diseñado de forma inteligente: si el backend no está disponi
 
 ---
 
-## 🛠️ Arquitectura y Tecnologías
+## Arquitectura y Tecnologías
 
 El proyecto se divide en dos componentes principales:
 
@@ -32,7 +32,7 @@ El proyecto se divide en dos componentes principales:
 
 ---
 
-## 📁 Estructura del Proyecto
+## Estructura del Proyecto
 
 ```text
 Mesa-Virtual-master/
@@ -64,7 +64,7 @@ Mesa-Virtual-master/
 
 ---
 
-## 🚀 Guía de Ejecución en Local
+## Guía de Ejecución en Local
 
 ### 1. Levantar el Backend (FastAPI)
 1. **Instalar Python 3** (si aún no lo tienes).
@@ -116,7 +116,7 @@ Mesa-Virtual-master/
 
 ---
 
-## 🌐 ¿Cómo desplegar en Netlify y la Nube de forma segura?
+## ¿Cómo desplegar en Netlify y la Nube de forma segura?
 
 **¿Se puede subir todo a Netlify?**
 * **Frontend (Sí):** Netlify es un servicio especializado en alojar páginas estáticas y aplicaciones de una sola página (SPA) como la de React/Vite.
