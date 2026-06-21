@@ -17,8 +17,12 @@ from App.API.detalles_pedido import router as detalles_pedido_router
 from App.API.pagos import router as pagos_router
 from App.API.auth import router as auth_router
 
-# Crear tablas
-Base.metadata.create_all(bind=engine)
+# Ya NO creamos las tablas aquí. Ahora el esquema lo gobierna Alembic:
+#   alembic upgrade head
+# se corre antes de levantar el servidor (ver README / instrucciones del equipo).
+# Dejar Base.metadata.create_all() activo junto con Alembic genera confusión:
+# create_all() no sabe de migraciones, solo crea tablas que no existen,
+# así que un cambio de columna nunca se aplicaría por esta vía.
 
 app = FastAPI(title="SwiftTable API")
 

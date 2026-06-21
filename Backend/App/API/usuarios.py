@@ -38,6 +38,9 @@ def eliminar_usuario(id: int, db: Session = Depends(get_db)):
     item = db.query(Usuario).filter(Usuario.id_usuario == id).first()
     if not item:
         raise HTTPException(status_code=404, detail="No encontrado")
-    db.delete(item)
+    # Soft-delete: si un usuario hizo pedidos como mesero, borrarlo de verdad
+    # rompería ese historial (FK Pedido.id_usuario). Solo lo desactivamos.
+    item.estado = "inactivo"
     db.commit()
-    return {"mensaje": "Eliminado correctamente"}
+    db.refresh(item)
+    return {"mensaje": "Usuario desactivado correctamente"}
