@@ -2,11 +2,9 @@ from pydantic import BaseModel
 from decimal import Decimal
 
 class DetallePedidoCreate(BaseModel):
-    cantidad: int
-    precio_unitario: Decimal
-    subtotal: Decimal
     id_pedido: int
     id_producto: int
+    cantidad: int
 
 class DetallePedidoResponse(BaseModel):
     id_detalle: int

@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, Numeric, Enum, DateTime, ForeignKey
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 from App.DataBase.connection import Base
 import enum
 
@@ -17,5 +18,8 @@ class Pago(Base):
     propina = Column(Numeric(10, 2), nullable=True)
     metodo_pago = Column(Enum(MetodoPago), nullable=False)
     fecha_pago = Column(DateTime, server_default=func.now())
-    
+
     id_pedido = Column(Integer, ForeignKey("pedidos.id_pedido"), unique=True, nullable=False)
+
+    pedido = relationship("Pedido", back_populates="pago")
+    
