@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Numeric, ForeignKey
+from sqlalchemy import Column, Integer, String, Numeric, ForeignKey, Index
+from sqlalchemy.orm import relationship
 from App.DataBase.connection import Base
 
 class Producto(Base):
@@ -9,5 +10,8 @@ class Producto(Base):
     descripcion = Column(String(255), nullable=True)
     precio = Column(Numeric(10, 2), nullable=False)
     estado = Column(String(20), default="disponible")
-    
+
     id_categoria = Column(Integer, ForeignKey("categorias.id_categoria"), nullable=False)
+
+    categoria = relationship("Categoria", back_populates="productos")
+    detalles = relationship("DetallePedido", back_populates="producto")

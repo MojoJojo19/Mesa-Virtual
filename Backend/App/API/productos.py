@@ -16,7 +16,7 @@ def crear_producto(datos: ProductoCreate, db: Session = Depends(get_db)):
 
 @router.get("/", response_model=list[ProductoResponse])
 def listar_productos(db: Session = Depends(get_db)):
-    return db.query(Producto).all()
+    return db.query(Producto).filter(Producto.estado == "disponible").all()
 
 @router.get("/{id}", response_model=ProductoResponse)
 def obtener_producto(id: int, db: Session = Depends(get_db)):
@@ -24,3 +24,23 @@ def obtener_producto(id: int, db: Session = Depends(get_db)):
     if not item:
         raise HTTPException(status_code=404, detail="No encontrado")
     return item
+
+@router.put("/{id}", response_model=ProductoResponse)
+def actualizar_producto(id: int, datos: ProductoCreate, db: Session = Depends(get_db)):
+    prod = db.query(Producto).filter(Producto.id_producto == id).first()
+    if not prod:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    for campo, valor in datos.model_dump().items():
+        setattr(prod, campo, valor)
+    db.commit()
+    db.refresh(prod)
+    return prod
+
+@router.delete("/{id}")
+def desactivar_producto(id: int, db: Session = Depends(get_db)):
+    prod = db.query(Producto).filter(Producto.id_producto == id).first()
+    if not prod:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    prod.estado = "inactivo"
+    db.commit()
+    return {"mensaje": f"Producto '{prod.nombre}' desactivado correctamente"}
