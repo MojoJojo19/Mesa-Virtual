@@ -1,19 +1,23 @@
 import React, { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { User, ChevronLeft } from 'lucide-react'
 import { crearComensal } from '../services/api'
+import { useToast } from '../components/Toast'
 
-const AVATARES = ['🐶', '🐱', '🦊', '🐸', '🐼', '🦁', '🐨', '🐯']
+const AVATARES = ['🐶', '🐱', '🦊', '🐸', '🦁', '🐻', '🐼', '🐨', '🐯', '🐮', '🐷', '🐵']
 
 export default function Ingreso() {
   const { idMesa } = useParams()
   const navigate = useNavigate()
+  const { toast } = useToast()
+  
   const [nombre, setNombre] = useState('')
   const [avatar, setAvatar] = useState('🐱')
   const [cargando, setCargando] = useState(false)
 
   const handleUnirse = async () => {
     if (!nombre.trim()) {
-      alert('Por favor escribe tu nombre')
+      toast('Ingresa tu nombre para continuar', 'error')
       return
     }
 
@@ -27,70 +31,68 @@ export default function Ingreso() {
         nombre: nuevoComensal.nombre,
         avatar: nuevoComensal.avatar,
         idMesa,
-        isLider: true,
-        modoPago: 'individual'
+        isLider: true, 
+        modoPago: 'individual' 
       }))
       navigate(`/mesa/${idMesa}/lobby`)
+    } else {
+      toast('Error al ingresar', 'error')
     }
   }
 
   return (
     <>
-      <div className="top-bar">
-        <span>SwiftTable</span>
-        <div className="mesa-badge">Mesa {idMesa}</div>
+      <div className="native-app-bar">
+        <div className="left-action">
+          <button className="wf-btn-ghost" onClick={() => navigate(-1)} style={{ padding: 0 }}>
+            <ChevronLeft size={28} color="var(--accent)" />
+          </button>
+        </div>
+        <div className="title">Identificación</div>
+        <div className="right-action"></div>
       </div>
 
-      <div className="flex-col flex-1 animate-fade-in">
-        <h1 className="title-main">¿Cómo te llamas?</h1>
-        <p className="subtitle">Tus compañeros de mesa te verán así</p>
+      <div className="content-wrapper flex-col">
+        <div style={{ textAlign: 'center', margin: '24px 0' }}>
+          <div style={{ position: 'relative', display: 'inline-block', marginBottom: '16px' }}>
+            <div style={{ width: '88px', height: '88px', borderRadius: '50%', background: 'var(--surface)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '44px', boxShadow: 'var(--shadow-sm)' }}>
+              {avatar}
+            </div>
+          </div>
+          <h1 className="title-large" style={{ fontSize: '28px' }}>¿Quién eres?</h1>
+        </div>
 
-        {/* Input nombre */}
-        <div className="wf-block animate-fade-in stagger-1">
-          <label className="wf-label" htmlFor="input-nombre">Tu nombre</label>
+        <div className="card" style={{ padding: '16px' }}>
           <input
-            id="input-nombre"
-            type="text"
             className="wf-input"
+            placeholder="Escribe tu nombre..."
             value={nombre}
-            onChange={e => setNombre(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleUnirse()}
-            placeholder="Ej. Carlos"
-            maxLength={20}
-            autoComplete="off"
+            onChange={e => setNombre(e.target.value.substring(0, 15))}
             autoFocus
           />
         </div>
 
-        {/* Selección de avatar */}
-        <div className="wf-block animate-fade-in stagger-2" style={{ marginBottom: '20px' }}>
-          <span className="wf-label">Elige tu avatar</span>
-          <div className="avatar-grid">
-            {AVATARES.map(a => (
-              <div
-                key={a}
-                id={`avatar-${a}`}
-                className={`avatar-item ${avatar === a ? 'selected' : ''}`}
-                onClick={() => setAvatar(a)}
-                title={a}
-              >
-                {a}
-              </div>
-            ))}
-          </div>
-          <p style={{ textAlign: 'center', fontSize: '12px', color: 'var(--color-text-tertiary)', marginTop: '4px' }}>
-            Avatar seleccionado: {avatar}
-          </p>
+        <div className="section-label" style={{ marginTop: '24px', marginLeft: '4px' }}>Selecciona tu avatar</div>
+        <div className="avatar-grid">
+          {AVATARES.map(a => (
+            <div 
+              key={a}
+              className={`avatar-item ${avatar === a ? 'selected' : ''}`}
+              onClick={() => setAvatar(a)}
+            >
+              {a}
+            </div>
+          ))}
         </div>
+      </div>
 
-        <button
-          id="btn-unirse"
-          className="wf-btn-solid"
+      <div className="native-bottom-bar">
+        <button 
+          className="wf-btn-solid" 
           onClick={handleUnirse}
-          disabled={cargando}
-          style={{ marginTop: 'auto', opacity: cargando ? 0.7 : 1 }}
+          disabled={!nombre.trim() || cargando}
         >
-          {cargando ? 'Conectando...' : 'Unirme a la mesa →'}
+          {cargando ? 'Conectando...' : 'Entrar a la mesa'}
         </button>
       </div>
     </>

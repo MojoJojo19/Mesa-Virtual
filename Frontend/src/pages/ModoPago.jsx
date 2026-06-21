@@ -1,125 +1,72 @@
 import React, { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { User, Divide, Crown } from 'lucide-react'
+import { ChevronLeft } from 'lucide-react'
 
 const MODOS = [
-  {
-    id: 'individual',
-    titulo: 'Pago individual',
-    sub: 'Cada uno paga lo suyo',
-    icon: <User size={20} />
-  },
-  {
-    id: 'partes_iguales',
-    titulo: 'Dividir en partes iguales',
-    sub: 'Total entre todos',
-    icon: <Divide size={20} />
-  },
-  {
-    id: 'lider',
-    titulo: 'Asumir como líder',
-    sub: 'Yo pago el total de la mesa',
-    icon: <Crown size={20} />
-  }
+  { id: 'individual', titulo: 'Pago Individual', desc: 'Cada uno elige sus platos y paga lo suyo' },
+  { id: 'partes_iguales', titulo: 'Partes Iguales', desc: 'Pedimos de todo y dividimos la cuenta entre todos' },
+  { id: 'lider', titulo: 'Asumir como Líder', desc: 'Yo invito. Pagaré la cuenta total de la mesa' }
 ]
 
 export default function ModoPago() {
   const { idMesa } = useParams()
   const navigate = useNavigate()
-  const [modoSeleccionado, setModoSeleccionado] = useState('individual')
+  const [modoSeleccionado, setModoSeleccionado] = useState(null)
 
-  const user = JSON.parse(localStorage.getItem('swifttable_user') || '{}')
-
-  const handleConfirmar = () => {
-    // Guardar el modo elegido
+  const handleContinuar = () => {
+    if (!modoSeleccionado) return
     const userData = JSON.parse(localStorage.getItem('swifttable_user') || '{}')
     localStorage.setItem('swifttable_user', JSON.stringify({
-      ...userData,
-      modoPago: modoSeleccionado,
-      isLider: modoSeleccionado === 'lider'
+      ...userData, 
+      modoPago: modoSeleccionado, 
+      isLider: true // El que configura el pago siempre es el líder de la mesa
     }))
     navigate(`/mesa/${idMesa}/menu`)
   }
 
   return (
     <>
-      <div className="top-bar">
-        <span>SwiftTable</span>
-        <div className="mesa-badge">Mesa {idMesa}</div>
+      <div className="native-app-bar">
+        <div className="left-action">
+          <button className="wf-btn-ghost" onClick={() => navigate(-1)} style={{ padding: 0 }}>
+            <ChevronLeft size={28} color="var(--accent)" />
+          </button>
+        </div>
+        <div className="title">Modo de Pago</div>
+        <div className="right-action"></div>
       </div>
 
-      <div className="flex-col flex-1 animate-fade-in">
-        <h1 className="title-main" style={{ fontSize: '20px', marginBottom: '4px' }}>
-          Modo de pago grupal
-        </h1>
-        <p className="subtitle">¿Cómo pagará la mesa?</p>
+      <div className="content-wrapper">
+        <div style={{ margin: '16px 0 32px' }}>
+          <h1 className="title-large">¿Cómo pagarán hoy?</h1>
+          <p className="subtitle">Elige cómo se dividirá la cuenta de la mesa.</p>
+        </div>
 
-        {/* Opciones */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
-          {MODOS.map((modo, idx) => (
-            <div
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {MODOS.map((modo) => (
+            <div 
               key={modo.id}
-              id={`modo-${modo.id}`}
-              className={`pago-option animate-fade-in stagger-${idx + 1}`}
-              style={modoSeleccionado === modo.id ? {
-                borderColor: 'var(--color-accent)',
-                background: 'var(--color-accent-dim)'
-              } : {}}
+              className={`pago-option ${modoSeleccionado === modo.id ? 'selected' : ''}`}
               onClick={() => setModoSeleccionado(modo.id)}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
-                <span style={{ display: 'flex', alignItems: 'center', color: modoSeleccionado === modo.id ? 'var(--color-accent)' : 'var(--color-text-secondary)' }}>
-                  {modo.icon}
-                </span>
-                <div>
-                  <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-text-primary)' }}>
-                    {modo.titulo}
-                  </div>
-                  <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>
-                    {modo.sub}
-                  </div>
-                </div>
+              <div style={{ flex: 1, paddingRight: '16px' }}>
+                <div style={{ fontSize: '17px', fontWeight: '600', marginBottom: '4px' }}>{modo.titulo}</div>
+                <div style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.3 }}>{modo.desc}</div>
               </div>
-              <div className={`pago-option-radio ${modoSeleccionado === modo.id ? 'selected' : ''}`}
-                style={modoSeleccionado === modo.id ? {
-                  borderColor: 'var(--color-accent)',
-                  background: 'var(--color-accent)'
-                } : {}}
-              />
+              <div className="pago-option-radio" />
             </div>
           ))}
         </div>
+      </div>
 
-        {/* Nota informativa */}
-        {modoSeleccionado === 'lider' && (
-          <div className="wf-block animate-fade-in" style={{
-            textAlign: 'center',
-            borderColor: 'var(--color-accent)',
-            background: 'var(--color-accent-dim)',
-            marginBottom: '16px'
-          }}>
-            <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '8px' }}>
-              Los demás verán esta notificación:
-            </div>
-            <div style={{
-              padding: '8px 12px', borderRadius: '8px',
-              background: 'var(--color-background-secondary)',
-              fontSize: '12px', color: 'var(--color-text-secondary)'
-            }}>
-              {user.avatar || '🐱'} <strong>{user.nombre || 'Tú'}</strong> asumirá el pago total
-            </div>
-          </div>
-        )}
-
-        <div style={{ marginTop: 'auto' }}>
-          <button
-            id="btn-confirmar-modo"
-            className="wf-btn-solid"
-            onClick={handleConfirmar}
-          >
-            Confirmar modo →
-          </button>
-        </div>
+      <div className="native-bottom-bar">
+        <button 
+          className="wf-btn-solid" 
+          onClick={handleContinuar}
+          disabled={!modoSeleccionado}
+        >
+          Continuar al Menú
+        </button>
       </div>
     </>
   )

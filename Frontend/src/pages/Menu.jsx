@@ -1,50 +1,57 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getPlatos } from '../services/api'
+import { Search, ShoppingBag } from 'lucide-react'
+import { getPlatos, getCategorias } from '../services/api'
 import { useToast } from '../components/Toast'
-
-const CATEGORIAS = ['Pollos', 'Bebidas', 'Entradas', 'Postres']
 
 export default function Menu() {
   const { idMesa } = useParams()
   const navigate = useNavigate()
   const { toast } = useToast()
 
-  const [carrito, setCarrito] = useState([])   // [{ ...plato, cantidad }]
+  const [carrito, setCarrito] = useState([])
   const [platos, setPlatos] = useState([])
-  const [categoria, setCategoria] = useState('Pollos')
+  const [categorias, setCategorias] = useState([])
+  const [categoria, setCategoria] = useState(1) // Por defecto id 1
   const [cargando, setCargando] = useState(true)
-  const [nota, setNota] = useState('')
-  const [mostrarNota, setMostrarNota] = useState(false)
 
   useEffect(() => {
-    getPlatos().then(data => {
-      setPlatos(data || [])
-      setCargando(false)
-    })
+    const fetchDatos = async () => {
+      try {
+        const [platosData, catsData] = await Promise.all([
+          getPlatos(),
+          getCategorias()
+        ])
+        setPlatos(platosData || [])
+        setCategorias(catsData || [])
+        if (catsData && catsData.length > 0) {
+          setCategoria(catsData[0].id_categoria)
+        }
+      } catch (e) {
+        toast('Error al cargar el menú', 'error')
+      } finally {
+        setCargando(false)
+      }
+    }
+    fetchDatos()
+  }, [toast])
+
+  useEffect(() => {
+    const prevCart = localStorage.getItem('swifttable_carrito')
+    if (prevCart) setCarrito(JSON.parse(prevCart))
   }, [])
 
-  const platosFiltrados = platos.filter(p => p.categoria === categoria)
+  const platosFiltrados = platos.filter(p => p.id_categoria === categoria)
 
   const getCantidad = (id) => {
     const item = carrito.find(p => p.id_producto === id)
     return item ? item.cantidad : 0
   }
 
-  const totalItems = carrito.reduce((s, p) => s + p.cantidad, 0)
-  const total = carrito.reduce((s, p) => s + Number(p.precio || 0) * p.cantidad, 0)
-
   const aumentar = (plato) => {
     setCarrito(prev => {
       const existe = prev.find(p => p.id_producto === plato.id_producto)
-      if (existe) {
-        return prev.map(p =>
-          p.id_producto === plato.id_producto
-            ? { ...p, cantidad: p.cantidad + 1 }
-            : p
-        )
-      }
-      toast(`${plato.icon} ${plato.nombre} agregado`, 'success', 2000)
+      if (existe) return prev.map(p => p.id_producto === plato.id_producto ? { ...p, cantidad: p.cantidad + 1 } : p)
       return [...prev, { ...plato, cantidad: 1 }]
     })
   }
@@ -53,226 +60,112 @@ export default function Menu() {
     setCarrito(prev => {
       const existe = prev.find(p => p.id_producto === plato.id_producto)
       if (!existe) return prev
-      if (existe.cantidad === 1) {
-        toast(`${plato.nombre} quitado del pedido`, 'info', 1800)
-        return prev.filter(p => p.id_producto !== plato.id_producto)
-      }
-      return prev.map(p =>
-        p.id_producto === plato.id_producto
-          ? { ...p, cantidad: p.cantidad - 1 }
-          : p
-      )
+      if (existe.cantidad === 1) return prev.filter(p => p.id_producto !== plato.id_producto)
+      return prev.map(p => p.id_producto === plato.id_producto ? { ...p, cantidad: p.cantidad - 1 } : p)
     })
   }
 
   const handleConfirmar = () => {
-    if (carrito.length === 0) {
-      toast('Agrega al menos un plato para continuar', 'warning')
-      return
-    }
-    localStorage.setItem('swifttable_carrito', JSON.stringify(
-      carrito.map(p => ({ ...p, nota }))
-    ))
+    if (carrito.length === 0) return
+    localStorage.setItem('swifttable_carrito', JSON.stringify(carrito))
     navigate(`/mesa/${idMesa}/pedido-grupo`)
   }
 
+  const limpiarCarrito = () => {
+    setCarrito([])
+    localStorage.removeItem('swifttable_carrito')
+  }
+
+  const totalItems = carrito.reduce((sum, p) => sum + p.cantidad, 0)
+  const totalMonto = carrito.reduce((sum, p) => sum + (Number(p.precio || 0) * p.cantidad), 0)
+
   return (
     <>
-      <div className="top-bar">
-        <span>SwiftTable</span>
-        <div className="mesa-badge">Mesa {idMesa}</div>
+      <div className="native-app-bar" style={{ paddingBottom: '8px' }}>
+        <div className="left-action">
+          <button className="wf-btn-ghost" onClick={() => navigate(-1)} style={{ padding: 0 }}>
+            <span style={{ fontSize: '28px', color: 'var(--accent)' }}>‹</span>
+          </button>
+        </div>
+        <div className="title" style={{ fontSize: '20px', fontWeight: '800', letterSpacing: '-0.02em' }}>Menú</div>
+        <div className="right-action">
+          {totalItems > 0 && (
+            <button className="wf-btn-ghost" style={{ color: 'var(--red)', fontSize: '14px' }} onClick={limpiarCarrito}>
+              Vaciar
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="animate-fade-in flex-col flex-1">
-        <p style={{ textAlign: 'center', fontSize: '13px', color: 'var(--color-text-secondary)', marginBottom: '16px' }}>
-          Bienvenido a <strong style={{ color: 'var(--color-accent)' }}>La Fogata</strong> — elige lo que deseas
-        </p>
-
-        {/* Tabs de categorías */}
-        <div className="category-tabs">
-          {CATEGORIAS.map(cat => (
-            <button
-              key={cat}
-              id={`tab-${cat.toLowerCase()}`}
-              className={`category-tab ${categoria === cat ? 'active' : ''}`}
-              onClick={() => setCategoria(cat)}
+      {/* Tabs Ancladas al header */}
+      <div style={{ position: 'sticky', top: 'calc(58px + var(--safe-top))', zIndex: 40, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', borderBottom: '0.5px solid var(--border)' }}>
+        <div className="category-tabs" style={{ margin: 0, padding: '12px 16px' }}>
+          {categorias.map(cat => (
+            <div
+              key={cat.id_categoria}
+              className={`category-tab ${categoria === cat.id_categoria ? 'active' : ''}`}
+              onClick={() => setCategoria(cat.id_categoria)}
             >
-              {cat}
-            </button>
+              {cat.nombre}
+            </div>
           ))}
         </div>
+      </div>
 
-        <div className="wf-label" style={{ marginBottom: '10px' }}>
-          {categoria === 'Pollos' && 'Platos principales'}
-          {categoria === 'Bebidas' && 'Bebidas'}
-          {categoria === 'Entradas' && 'Entradas'}
-          {categoria === 'Postres' && 'Postres'}
-        </div>
-
-        {/* Lista de platos */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
-          {cargando ? (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-tertiary)', fontSize: '13px' }}>
-              <div className="animate-pulse">Cargando menú...</div>
-            </div>
-          ) : platosFiltrados.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-tertiary)', fontSize: '13px' }}>
-              Sin platos en esta categoría
-            </div>
-          ) : (
-            platosFiltrados.map((plato, idx) => {
-              const cantidad = getCantidad(plato.id_producto)
+      <div className="content-wrapper" style={{ padding: '0 16px calc(120px + var(--safe-bottom))' }}>
+        
+        {cargando ? (
+          <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-3)' }}>Cargando...</div>
+        ) : (
+          <div style={{ marginTop: '16px' }}>
+            {platosFiltrados.map((plato, i) => {
+              const cant = getCantidad(plato.id_producto)
+              const isInCart = cant > 0
               return (
-                <div
-                  key={plato.id_producto}
-                  className={`wf-block animate-fade-in stagger-${Math.min(idx + 1, 5)}`}
-                  style={{
-                    marginBottom: 0,
-                    borderColor: cantidad > 0 ? 'var(--color-accent)' : 'var(--color-border-tertiary)',
-                    transition: 'border-color 0.25s ease'
-                  }}
-                >
-                  <div className="menu-item">
-                    <div className="menu-item-icon" style={{ position: 'relative' }}>
-                      {plato.icon}
-                      {/* Badge de cantidad */}
-                      {cantidad > 0 && (
-                        <div style={{
-                          position: 'absolute', top: '-6px', right: '-6px',
-                          width: '18px', height: '18px', borderRadius: '50%',
-                          background: 'var(--color-accent)',
-                          color: '#0f0f0f', fontSize: '10px', fontWeight: '700',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          animation: 'scaleIn 0.2s ease',
-                        }}>
-                          {cantidad}
-                        </div>
-                      )}
-                    </div>
+                <div key={plato.id_producto} className={`menu-item-card ${isInCart ? 'in-cart' : ''} animate-pop stagger-${(i % 5) + 1}`}>
+                  <div className="menu-item-thumb">
+                    {plato.imagen_url ? (
+                      <img src={plato.imagen_url} alt={plato.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+                    ) : (
+                      <span style={{ fontSize: '24px' }}>🍗</span>
+                    )}
+                  </div>
+                  
+                  <div className="menu-item-info">
+                    <div className="menu-item-name">{plato.nombre}</div>
+                    <div className="menu-item-desc">{plato.descripcion}</div>
+                    <div className="menu-item-price">S/ {Number(plato.precio || 0).toFixed(2)}</div>
+                  </div>
 
-                    <div className="menu-item-info">
-                      <div className="menu-item-name">{plato.nombre}</div>
-                      <div className="menu-item-desc">{plato.descripcion}</div>
-                      <div className="menu-item-price">S/ {Number(plato.precio || 0).toFixed(2)}</div>
-                    </div>
-
-                    {/* Contador +/- */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                      {cantidad > 0 && (
-                        <>
-                          <button
-                            id={`btn-quitar-${plato.id_producto}`}
-                            onClick={() => disminuir(plato)}
-                            style={{
-                              width: '28px', height: '28px', borderRadius: '8px',
-                              border: '1px solid var(--color-border-primary)',
-                              background: 'var(--color-background-secondary)',
-                              color: 'var(--color-text-primary)',
-                              fontSize: '16px', fontWeight: '700',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              cursor: 'pointer', transition: 'all 0.15s',
-                              fontFamily: 'inherit',
-                              lineHeight: 1,
-                            }}
-                          >−</button>
-                          <span style={{
-                            fontSize: '15px', fontWeight: '700',
-                            color: 'var(--color-accent)', minWidth: '16px', textAlign: 'center'
-                          }}>
-                            {cantidad}
-                          </span>
-                        </>
-                      )}
-                      <button
-                        id={`btn-agregar-${plato.id_producto}`}
-                        onClick={() => aumentar(plato)}
-                        style={{
-                          width: '28px', height: '28px', borderRadius: '8px',
-                          border: `1px solid ${cantidad > 0 ? 'var(--color-accent)' : 'var(--color-border-primary)'}`,
-                          background: cantidad > 0 ? 'var(--color-accent-dim)' : 'var(--color-background-secondary)',
-                          color: cantidad > 0 ? 'var(--color-accent)' : 'var(--color-text-secondary)',
-                          fontSize: '18px', fontWeight: '700',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          cursor: 'pointer', transition: 'all 0.15s',
-                          fontFamily: 'inherit',
-                          lineHeight: 1,
-                        }}
-                      >+</button>
-                    </div>
+                  <div className="qty-control">
+                    {cant > 0 ? (
+                      <>
+                        <button className="qty-btn" onClick={() => disminuir(plato)}>-</button>
+                        <div className="qty-num">{cant}</div>
+                        <button className="qty-btn plus" onClick={() => aumentar(plato)}>+</button>
+                      </>
+                    ) : (
+                      <button className="qty-btn plus" style={{ width: 'auto', padding: '0 12px', borderRadius: '16px', fontSize: '15px', fontWeight: '600' }} onClick={() => aumentar(plato)}>Agregar</button>
+                    )}
                   </div>
                 </div>
               )
-            })
-          )}
-        </div>
-
-        {/* Nota para cocina — toggleable */}
-        {carrito.length > 0 && (
-          <div style={{ marginTop: '14px' }}>
-            <button
-              className="wf-btn-ghost"
-              style={{ fontSize: '12px', width: '100%', textAlign: 'left', padding: '8px 4px' }}
-              onClick={() => setMostrarNota(!mostrarNota)}
-            >
-              {mostrarNota ? '▾' : '▸'} {mostrarNota ? 'Ocultar nota' : '+ Agregar nota para cocina'}
-            </button>
-            {mostrarNota && (
-              <textarea
-                id="nota-cocina"
-                value={nota}
-                onChange={e => setNota(e.target.value)}
-                placeholder="Ej: Sin cebolla, poco picante..."
-                maxLength={120}
-                rows={2}
-                style={{
-                  width: '100%',
-                  background: 'var(--color-background-primary)',
-                  border: '1px solid var(--color-border-secondary)',
-                  borderRadius: '10px',
-                  padding: '10px 12px',
-                  color: 'var(--color-text-primary)',
-                  fontFamily: 'inherit',
-                  fontSize: '13px',
-                  resize: 'none',
-                  outline: 'none',
-                  marginTop: '6px',
-                  transition: 'border-color 0.2s',
-                }}
-                onFocus={e => e.target.style.borderColor = 'var(--color-accent)'}
-                onBlur={e => e.target.style.borderColor = 'var(--color-border-secondary)'}
-              />
-            )}
-          </div>
-        )}
-
-        {/* Barra del carrito */}
-        {totalItems > 0 && (
-          <div className="carrito-bar">
-            <div>
-              <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>
-                {totalItems} producto{totalItems > 1 ? 's' : ''} · {carrito.length} plato{carrito.length > 1 ? 's' : ''}
-              </div>
-              <div style={{ fontSize: '18px', fontWeight: '700', color: 'var(--color-text-primary)' }}>
-                S/ {total.toFixed(2)}
-              </div>
-            </div>
-            <button
-              id="btn-confirmar-pedido"
-              onClick={handleConfirmar}
-              style={{
-                background: 'linear-gradient(135deg, #f0a060, #e8863a)',
-                color: '#0f0f0f', border: 'none', borderRadius: '10px',
-                padding: '11px 16px', fontSize: '13px', fontWeight: '700',
-                cursor: 'pointer', transition: 'all 0.2s',
-                boxShadow: '0 4px 12px rgba(232,134,58,0.4)',
-                fontFamily: 'inherit',
-              }}
-            >
-              Confirmar pedido
-            </button>
+            })}
           </div>
         )}
       </div>
+
+      {totalItems > 0 && (
+        <div className="native-bottom-bar" style={{ display: 'flex', gap: '16px', padding: '16px' }}>
+          <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '12px', color: 'var(--text-2)', fontWeight: '500' }}>{totalItems} items</span>
+            <span style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-1)' }}>S/ {totalMonto.toFixed(2)}</span>
+          </div>
+          <button className="wf-btn-solid" style={{ flex: 1, padding: '16px' }} onClick={handleConfirmar}>
+            Revisar Pedido
+          </button>
+        </div>
+      )}
     </>
   )
 }

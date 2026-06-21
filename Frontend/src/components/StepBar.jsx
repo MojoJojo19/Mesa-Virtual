@@ -1,93 +1,81 @@
 import React from 'react'
 
-// Pasos del flujo completo
-const PASOS = [
-  { ruta: /\/mesa\/\d+$/, label: 'Acceso' },
-  { ruta: /\/(pin|acceso|ingreso)/, label: 'Ingreso' },
-  { ruta: /\/(lobby|pago-modo)/, label: 'Sala' },
-  { ruta: /\/(menu|pedido-grupo)/, label: 'Menú' },
-  { ruta: /\/(confirmado|resumen)/, label: 'Pago' },
-]
-
 export default function StepBar({ pathname }) {
-  // Detectar paso actual
-  const pasoActual = PASOS.findIndex(p => p.ruta.test(pathname))
+  // Ocultar barra en la bienvenida y cuando se envía el pedido
+  if (pathname.endsWith('7') || pathname.includes('confirmado')) {
+    return null
+  }
 
-  if (pasoActual < 0) return null
+  const steps = [
+    { path: 'pin',        label: 'Mesa' },
+    { path: 'ingreso',    label: 'Mesa' },
+    { path: 'acceso',     label: 'Mesa' },
+    { path: 'lobby',      label: 'Mesa' },
+    { path: 'pago-modo',  label: 'Pago' },
+    { path: 'menu',       label: 'Menú' },
+    { path: 'pedido',     label: 'Resumen' },
+    { path: 'resumen',    label: 'Resumen' },
+  ]
+
+  let currentIdx = -1
+  for (let i = 0; i < steps.length; i++) {
+    if (pathname.includes(steps[i].path)) {
+      currentIdx = i
+      break
+    }
+  }
+
+  if (currentIdx === -1) return null
+
+  // Reducimos los pasos a 3 fases visuales para no abrumar
+  const phases = ['Ingreso', 'Menú', 'Pago']
+  let activePhase = 0
+  if (currentIdx >= 4) activePhase = 1
+  if (currentIdx >= 6) activePhase = 2
 
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '4px',
-      marginBottom: '18px',
-      paddingBottom: '14px',
-      borderBottom: '1px solid var(--color-border-tertiary)',
-    }}>
-      {PASOS.map((paso, i) => {
-        const esActual    = i === pasoActual
-        const esCompletado = i < pasoActual
-        const esFuturo    = i > pasoActual
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', padding: '12px 0 16px', marginBottom: '8px' }}>
+      {phases.map((phase, i) => {
+        const isActive = i === activePhase
+        const isPast = i < activePhase
+
+        let bgColor = 'var(--surface-2)'
+        let borderColor = 'var(--border)'
+        let textColor = 'var(--text-3)'
+
+        if (isActive) {
+          bgColor = 'var(--accent)'
+          borderColor = 'var(--accent)'
+          textColor = '#fff'
+        } else if (isPast) {
+          bgColor = 'var(--green)'
+          borderColor = 'var(--green)'
+          textColor = '#fff'
+        }
 
         return (
-          <React.Fragment key={paso.label}>
-            {/* Nodo del paso */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+          <React.Fragment key={phase}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              opacity: (isActive || isPast) ? 1 : 0.6
+            }}>
               <div style={{
-                width: esActual ? '22px' : '16px',
-                height: esActual ? '22px' : '16px',
-                borderRadius: '50%',
+                width: '18px', height: '18px', borderRadius: '50%',
+                background: bgColor, border: `2px solid ${borderColor}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: esActual ? '10px' : '8px',
-                fontWeight: '700',
-                border: esCompletado
-                  ? '2px solid var(--color-success)'
-                  : esActual
-                    ? '2px solid var(--color-accent)'
-                    : '1.5px solid var(--color-border-secondary)',
-                background: esCompletado
-                  ? 'var(--color-success-dim)'
-                  : esActual
-                    ? 'var(--color-accent-dim)'
-                    : 'transparent',
-                color: esCompletado
-                  ? 'var(--color-success)'
-                  : esActual
-                    ? 'var(--color-accent)'
-                    : 'var(--color-text-tertiary)',
-                transition: 'all 0.3s ease',
-                flexShrink: 0,
+                fontSize: '9px', fontWeight: '800', color: textColor,
+                transition: 'all var(--t-normal)'
               }}>
-                {esCompletado ? '✓' : i + 1}
+                {isPast ? '✓' : i + 1}
               </div>
-              <span style={{
-                fontSize: '9px',
-                color: esActual
-                  ? 'var(--color-accent)'
-                  : esCompletado
-                    ? 'var(--color-success)'
-                    : 'var(--color-text-tertiary)',
-                fontWeight: esActual ? '600' : '400',
-                transition: 'color 0.3s',
-                whiteSpace: 'nowrap',
-              }}>
-                {paso.label}
-              </span>
+              {isActive && (
+                <span style={{ fontSize: '11px', fontWeight: '800', fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}>
+                  {phase}
+                </span>
+              )}
             </div>
-
-            {/* Línea conectora */}
-            {i < PASOS.length - 1 && (
-              <div style={{
-                flex: 1,
-                height: '1.5px',
-                marginBottom: '14px',
-                background: esCompletado
-                  ? 'var(--color-success)'
-                  : 'var(--color-border-tertiary)',
-                transition: 'background 0.4s ease',
-                maxWidth: '40px',
-              }} />
+            {i < phases.length - 1 && (
+              <div style={{ width: '20px', height: '2px', background: isPast ? 'var(--green-border)' : 'var(--border)', borderRadius: '2px' }} />
             )}
           </React.Fragment>
         )

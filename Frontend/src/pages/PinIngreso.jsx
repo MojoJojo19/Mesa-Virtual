@@ -1,114 +1,73 @@
 import React, { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useToast } from '../components/Toast'
-
-const PIN_CORRECTO = '7823' // PIN de demo — en producción lo valida el backend
+import { ChevronLeft, KeyRound } from 'lucide-react'
 
 export default function PinIngreso() {
   const { idMesa } = useParams()
   const navigate = useNavigate()
-  const { toast } = useToast()
   const [pin, setPin] = useState('')
-  const [error, setError] = useState(false)
-  const [shake, setShake] = useState(false)
 
-  const handleKey = (digit) => {
-    if (pin.length >= 4) return
-    const nuevoPin = pin + digit
-    setPin(nuevoPin)
-    setError(false)
-
-    if (nuevoPin.length === 4) {
-      setTimeout(() => {
-        if (nuevoPin === PIN_CORRECTO || true) { // Acepta cualquier PIN de 4 dígitos en demo
-          toast('✓ PIN correcto — Mesa verificada', 'success', 2000)
-          navigate(`/mesa/${idMesa}/acceso`)
-        } else {
-          setShake(true)
-          toast('PIN incorrecto, intenta de nuevo', 'error')
-          setTimeout(() => { setPin(''); setShake(false); setError(true) }, 600)
-        }
-      }, 300)
+  const handlePadClick = (num) => {
+    if (pin.length < 4) {
+      const newPin = pin + num
+      setPin(newPin)
+      if (newPin.length === 4) {
+        setTimeout(() => navigate(`/mesa/${idMesa}/acceso`), 300)
+      }
     }
   }
 
-  const handleBorrar = () => {
-    setPin(prev => prev.slice(0, -1))
-    setError(false)
-  }
-
-  const keys = ['1','2','3','4','5','6','7','8','9','⌫','0','✓']
+  const handleDelete = () => setPin(pin.slice(0, -1))
 
   return (
     <>
-      <div className="top-bar">
-        <span>SwiftTable</span>
-        <div className="mesa-badge">Mesa {idMesa}</div>
-      </div>
-
-      <div className="flex-col flex-1 animate-fade-in">
-        {/* Encabezado */}
-        <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-          <h1 className="title-main">Ingresa el PIN</h1>
-          <p className="subtitle">El mesero te dará el PIN de 4 dígitos</p>
-        </div>
-
-        {/* Display PIN */}
-        <div
-          className="pin-display"
-          style={{
-            transform: shake ? 'translateX(-8px)' : 'translateX(0)',
-            transition: shake ? 'transform 0.1s ease' : 'transform 0.3s ease'
-          }}
-        >
-          {[0,1,2,3].map(i => (
-            <div
-              key={i}
-              className={`pin-dot ${i < pin.length ? 'filled' : ''}`}
-            />
-          ))}
-        </div>
-
-        {error && (
-          <div style={{
-            textAlign: 'center', fontSize: '12px',
-            color: '#f87171', marginBottom: '8px', animate: 'fadeIn 0.3s ease'
-          }}>
-            PIN incorrecto — intenta de nuevo
-          </div>
-        )}
-
-        {/* Teclado numérico */}
-        <div className="pin-grid">
-          {keys.map(k => (
-            <button
-              key={k}
-              id={`pin-key-${k}`}
-              className="pin-key"
-              onClick={() => {
-                if (k === '⌫') handleBorrar()
-                else if (k === '✓') { /* confirmar — ya se confirma automático */ }
-                else handleKey(k)
-              }}
-              style={k === '✓' ? { fontSize: '16px', color: 'var(--color-accent)' } : {}}
-            >
-              {k}
-            </button>
-          ))}
-        </div>
-
-        {/* Link alternativo */}
-        <div style={{ textAlign: 'center', marginTop: 'auto', paddingTop: '20px' }}>
-          <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)', marginBottom: '10px' }}>
-            ¿Problemas con el PIN?
-          </div>
-          <button
-            className="wf-btn-ghost"
-            onClick={() => navigate(`/mesa/${idMesa}/ingreso`)}
-          >
-            Ingresar directamente →
+      <div className="native-app-bar">
+        <div className="left-action">
+          <button className="wf-btn-ghost" onClick={() => navigate(-1)} style={{ padding: 0 }}>
+            <ChevronLeft size={28} color="var(--accent)" />
           </button>
         </div>
+        <div className="title">Ingreso</div>
+        <div className="right-action"></div>
+      </div>
+
+      <div className="content-wrapper flex-col" style={{ justifyContent: 'center' }}>
+        
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <div style={{ 
+            width: '64px', height: '64px', borderRadius: '16px', 
+            background: 'var(--surface)', color: 'var(--text-1)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 16px', border: '1px solid var(--border)',
+            boxShadow: 'var(--shadow-sm)'
+          }}>
+            <KeyRound size={32} />
+          </div>
+          <h1 className="title-large" style={{ fontSize: '24px' }}>PIN de la mesa</h1>
+          <p className="subtitle">Ingresa los 4 dígitos del centro de mesa</p>
+        </div>
+
+        {/* Display de Puntos */}
+        <div className="pin-display animate-fade-in">
+          {[0,1,2,3].map(i => (
+            <div key={i} className={`pin-dot ${i < pin.length ? 'filled' : ''}`} />
+          ))}
+        </div>
+
+        {/* Teclado Numérico */}
+        <div className="pin-grid animate-fade-in" style={{ maxWidth: '280px', margin: '0 auto' }}>
+          {[1,2,3,4,5,6,7,8,9].map(num => (
+            <div key={num} className="pin-key" onClick={() => handlePadClick(num.toString())}>
+              {num}
+            </div>
+          ))}
+          <div className="pin-key" style={{ background: 'transparent', border: 'none', boxShadow: 'none' }} />
+          <div className="pin-key" onClick={() => handlePadClick('0')}>0</div>
+          <div className="pin-key" onClick={handleDelete} style={{ background: 'var(--surface-2)', fontSize: '20px' }}>
+            ⌫
+          </div>
+        </div>
+
       </div>
     </>
   )

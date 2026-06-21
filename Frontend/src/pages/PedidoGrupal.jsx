@@ -1,132 +1,125 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { ChevronLeft, Users, Check, Clock } from 'lucide-react'
 
 export default function PedidoGrupal() {
   const { idMesa } = useParams()
   const navigate = useNavigate()
 
   const user = JSON.parse(localStorage.getItem('swifttable_user') || '{"nombre":"Carlos","avatar":"🐱","isLider":true}')
+  const isLider = user.isLider || false
+  const miCarrito = JSON.parse(localStorage.getItem('swifttable_carrito') || '[]')
+  
+  const miTotal = miCarrito.reduce((s, p) => s + Number(p.precio || 0) * (p.cantidad || 1), 0)
 
-  // Pedidos simulados de la mesa
-  const pedidos = [
+  const [pedidosMesa, setPedidosMesa] = useState([
     {
-      nombre: user.nombre || 'Carlos',
-      avatar: user.avatar || '🐱',
-      lider: user.isLider || true,
-      detalle: 'Pollo 1/4 + Inca Kola',
-      precio: 23.00,
-      estado: 'listo'
+      id: user.id || 'u1', nombre: user.nombre || 'Carlos', avatar: user.avatar || '🐱',
+      estado: 'listo', isLider, items: miCarrito, total: miTotal
     },
     {
-      nombre: 'Ana',
-      avatar: '🐶',
-      lider: false,
-      detalle: 'Pollo 1/2 + Inca Kola',
-      precio: 37.00,
-      estado: 'listo'
+      id: 'u2', nombre: 'Ana', avatar: '🐶', estado: 'listo', isLider: false,
+      items: [{ nombre: '1/2 Pollo a la Brasa', cantidad: 1, precio: 37.00 }], total: 37.00
     },
     {
-      nombre: 'Luis',
-      avatar: '🦊',
-      lider: false,
-      detalle: null,
-      precio: 0,
-      estado: 'pendiente'
+      id: 'u3', nombre: 'Luis', avatar: '🦊', estado: 'eligiendo', isLider: false,
+      items: [], total: 0
     }
-  ]
+  ])
 
-  const totalParcial = pedidos.reduce((sum, p) => sum + p.precio, 0)
-  const modoPago = user.modoPago || 'individual'
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPedidosMesa(prev => prev.map(p => {
+        if (p.id === 'u3') return { ...p, estado: 'listo', items: [{ nombre: '1/4 Pollo', cantidad: 1, precio: 23.00 }], total: 23.00 }
+        return p
+      }))
+    }, 5000)
+    return () => clearTimeout(timer)
+  }, [])
+
+  const todosListos = pedidosMesa.every(p => p.estado === 'listo')
+  const totalMesa = pedidosMesa.reduce((sum, p) => sum + p.total, 0)
+  const totalItems = pedidosMesa.reduce((sum, p) => sum + p.items.reduce((s, i) => s + i.cantidad, 0), 0)
 
   return (
     <>
-      <div className="top-bar">
-        <span>SwiftTable</span>
-        <div className="mesa-badge">Mesa {idMesa}</div>
+      <div className="native-app-bar">
+        <div className="left-action">
+          <button className="wf-btn-ghost" onClick={() => navigate(-1)} style={{ padding: 0 }}>
+            <ChevronLeft size={28} color="var(--accent)" />
+          </button>
+        </div>
+        <div className="title">Revisar Pedido</div>
+        <div className="right-action"></div>
       </div>
 
-      <div className="flex-col flex-1 animate-fade-in">
-        <div className="wf-label" style={{ marginBottom: '12px' }}>
-          Pedidos de la mesa
+      <div className="content-wrapper">
+        <div className="card-accent" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '16px 0', border: 'none' }}>
+          <div>
+            <div style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '4px' }}>Total de la Mesa</div>
+            <div style={{ fontSize: '28px', fontWeight: '800' }}>S/ {totalMesa.toFixed(2)}</div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '14px', fontWeight: '600' }}><Users size={14}/> {pedidosMesa.length} pers.</div>
+            <div style={{ fontSize: '14px', color: 'var(--text-2)', marginTop: '2px' }}>{totalItems} platos</div>
+          </div>
         </div>
 
-        {/* Lista de pedidos por persona */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-          {pedidos.map((p, i) => (
-            <div
-              key={i}
-              className={`wf-block animate-fade-in stagger-${i + 1}`}
-              style={{ marginBottom: 0, padding: '12px 14px' }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div className="user-avatar-sm" style={{ width: '32px', height: '32px', fontSize: '15px' }}>
-                  {p.avatar}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '13px', fontWeight: '600' }}>{p.nombre}</span>
-                    {p.lider && <span className="lider-badge">Líder</span>}
-                  </div>
-                  {p.detalle ? (
-                    <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>
-                      {p.detalle} · <span style={{ color: 'var(--color-accent)' }}>S/ {p.precio.toFixed(2)}</span>
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: '11px', color: 'var(--color-text-tertiary)', marginTop: '2px' }}
-                      className="animate-pulse">
-                      Aún no ha pedido...
-                    </div>
-                  )}
-                </div>
-                {p.estado === 'listo' && (
-                  <div style={{
-                    width: '22px', height: '22px', borderRadius: '50%',
-                    background: 'var(--color-success-dim)',
-                    border: '1px solid var(--color-success)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '11px', color: 'var(--color-success)', flexShrink: 0
-                  }}>✓</div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Divider + Total parcial */}
-        <div className="divider" />
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>Total parcial</span>
-          <span style={{ fontSize: '16px', fontWeight: '700', color: 'var(--color-text-primary)' }}>
-            S/ {totalParcial.toFixed(2)}
+        <div className="section-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <span>Estado por persona</span>
+          <span style={{ color: todosListos ? 'var(--green)' : 'var(--text-3)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            {todosListos ? <><Check size={14}/> Listos</> : <><Clock size={14}/> Esperando...</>}
           </span>
         </div>
 
-        {/* Nota de modo pago */}
-        {modoPago === 'lider' && (
-          <div style={{
-            fontSize: '11px', color: 'var(--color-text-tertiary)',
-            textAlign: 'center', marginBottom: '14px'
-          }}>
-            En modo líder, {user.nombre || 'el líder'} pagará el total final
+        <div className="card" style={{ padding: '0' }}>
+          {pedidosMesa.map((p, idx) => (
+            <div key={p.id} className="list-item" style={{ padding: '16px' }}>
+              <div className="avatar-circle" style={{ 
+                background: p.estado === 'listo' ? 'var(--green-bg)' : 'var(--bg)',
+                color: p.estado === 'listo' ? 'var(--green)' : 'var(--text-3)' 
+              }}>
+                {p.estado === 'listo' ? p.avatar : <Clock size={20} />}
+              </div>
+              
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {p.nombre} {p.id === user.id && <span style={{ fontSize: '13px', color: 'var(--text-3)' }}>(Tú)</span>}
+                  {p.isLider && <span style={{ fontSize: '11px', background: 'var(--bg)', padding: '2px 6px', borderRadius: '4px' }}>Líder</span>}
+                </div>
+                {p.estado === 'listo' ? (
+                  <div style={{ fontSize: '13px', color: 'var(--text-2)', marginTop: '4px' }}>
+                    {p.items.map(i => `${i.cantidad}x ${i.nombre}`).join(', ')}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '13px', color: 'var(--text-3)', fontStyle: 'italic', marginTop: '4px' }}>Eligiendo platos...</div>
+                )}
+              </div>
+
+              {p.estado === 'listo' && (
+                <div style={{ fontSize: '16px', fontWeight: '600' }}>
+                  S/ {p.total.toFixed(2)}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="native-bottom-bar">
+        {isLider ? (
+          <button 
+            className="wf-btn-solid" 
+            onClick={() => navigate(`/mesa/${idMesa}/confirmado`)}
+            disabled={!todosListos}
+          >
+            {todosListos ? 'Enviar Pedido a Cocina' : 'Esperando a los demás...'}
+          </button>
+        ) : (
+          <div style={{ width: '100%', textAlign: 'center', padding: '16px', fontSize: '14px', color: 'var(--text-2)', fontWeight: '500' }}>
+            Esperando a que el líder envíe el pedido
           </div>
         )}
-
-        {/* Botones */}
-        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <button
-            id="btn-enviar-pedido"
-            className="wf-btn-solid"
-            onClick={() => navigate(`/mesa/${idMesa}/confirmado`)}
-          >
-            Enviar mi pedido →
-          </button>
-          <button
-            className="wf-btn-outline"
-            onClick={() => navigate(`/mesa/${idMesa}/menu`)}
-          >
-            ← Volver al menú
-          </button>
-        </div>
       </div>
     </>
   )

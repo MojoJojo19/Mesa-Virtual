@@ -18,7 +18,7 @@ function AppInner() {
 
   return (
     <div className="app-container">
-      <StepBar pathname={location.pathname} />
+      {/* StepBar is temporarily hidden for native feel, or we can leave it. I'll remove it from the global scope to let headers handle navigation natively. */}
       <Routes>
         <Route path="/"                          element={<Navigate to="/mesa/7" replace />} />
         <Route path="/mesa/:idMesa"              element={<Bienvenida />} />
