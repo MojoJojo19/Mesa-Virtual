@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ChevronLeft, Smartphone, CreditCard, Banknote } from 'lucide-react'
-import { pedirCuenta } from '../services/api'
+import { pedirCuenta, registrarPago, enviarPedido, getPedidosDeMesa } from '../services/api'
 import { useToast } from '../components/Toast'
 
 const METODOS_PAGO = [
@@ -16,8 +16,10 @@ export default function Resumen() {
   const { toast } = useToast()
 
   const [metodoPago, setMetodoPago] = useState('yape')
-  const [propinaIdx, setPropinaIdx] = useState(1) // 0=0%, 1=5%, 2=10%
+  const [propinaIdx, setPropinaIdx] = useState(1) // 0=0%, 1=5%, 2=10%, 3=Otros
+  const [propinaOtros, setPropinaOtros] = useState('')
   const [solicitando, setSolicitando] = useState(false)
+  const [pagando, setPagando] = useState(false)
 
   const handlePedirCuenta = async () => {
     setSolicitando(true)
@@ -39,8 +41,8 @@ export default function Resumen() {
 
   const pedidosMesa = [
     { nombre: user.nombre, isLider: user.isLider, precio: miTotal },
-    { nombre: 'Ana', isLider: false, precio: 37.00 },
-    { nombre: 'Luis', isLider: false, precio: 23.00 },
+    { nombre: 'Ana', isLider: false, precio: 32.00 },
+    { nombre: 'Luis', isLider: false, precio: 18.00 },
   ]
 
   const subtotal = (isLider && user.modoPago === 'lider')
@@ -48,9 +50,49 @@ export default function Resumen() {
     : miTotal
 
   const servicio = subtotal * 0.10
-  const pctPropina = propinaIdx === 0 ? 0 : propinaIdx === 1 ? 0.05 : 0.10
-  const propinaMonto = subtotal * pctPropina
+  const pctPropina = propinaIdx === 0 ? 0 : propinaIdx === 1 ? 0.05 : propinaIdx === 2 ? 0.10 : 0
+  const propinaMonto = propinaIdx === 3 ? (Number(propinaOtros) || 0) : (subtotal * pctPropina)
   const totalFinal = subtotal + servicio + propinaMonto
+
+  const handlePagar = async () => {
+    setPagando(true)
+    try {
+      let idPedido = localStorage.getItem('swifttable_id_pedido')
+      
+      if (!idPedido) {
+        // Fallback: buscar pedidos pendientes de la mesa
+        const peds = await getPedidosDeMesa(idMesa)
+        const pedPendiente = peds && peds.find(p => p.estado === 'pendiente')
+        if (pedPendiente) {
+          idPedido = pedPendiente.id_pedido
+        }
+      }
+      
+      if (!idPedido) {
+        // Fallback local en caso de pruebas directas sin pasar por menú
+        const todosItems = miCarrito.map(c => ({ id_producto: c.id_producto, cantidad: c.cantidad }))
+        if (todosItems.length === 0) {
+          todosItems.push({ id_producto: 1, cantidad: 1 }) // fallback a un plato
+        }
+        const resPedido = await enviarPedido(idMesa, todosItems)
+        idPedido = resPedido.id_pedido
+      }
+      
+      await registrarPago(idPedido, totalFinal, propinaMonto, metodoPago)
+      toast('Pago registrado y validado. Tu pedido ha sido enviado a la cocina.', 'success')
+      
+      // Limpiar datos temporales
+      localStorage.removeItem('swifttable_carrito')
+      localStorage.removeItem('swifttable_id_pedido')
+      
+      // Navegar a la pantalla de seguimiento de cocina
+      navigate(`/mesa/${idMesa}/confirmado`)
+    } catch (err) {
+      toast('Error al registrar el pago', 'error')
+    } finally {
+      setPagando(false)
+    }
+  }
 
   const restName = localStorage.getItem('swifttable_nombre_restaurante') || 'SwiftTable'
 
@@ -87,24 +129,52 @@ export default function Resumen() {
           </div>
           {propinaMonto > 0 && (
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '15px' }}>
-              <span style={{ color: 'var(--text-2)' }}>Propina ({(pctPropina * 100).toFixed(0)}%)</span>
+              <span style={{ color: 'var(--text-2)' }}>Propina {propinaIdx === 3 ? '(Otros)' : `(${(pctPropina * 100).toFixed(0)}%)`}</span>
               <span>S/ {propinaMonto.toFixed(2)}</span>
             </div>
           )}
         </div>
 
         <div className="section-label">Propina sugerida</div>
-        <div className="segmented-control">
-          {[0, 0.05, 0.10].map((val, idx) => (
+        <div className="segmented-control" style={{ marginBottom: propinaIdx === 3 ? '12px' : '0px' }}>
+          {[0, 0.05, 0.10, 'otro'].map((val, idx) => (
             <div
               key={idx}
               className={`segment-btn ${propinaIdx === idx ? 'active' : ''}`}
               onClick={() => setPropinaIdx(idx)}
             >
-              {val === 0 ? 'Nada' : `${val * 100}%`}
+              {val === 0 ? 'Nada' : val === 'otro' ? 'Otros' : `${val * 100}%`}
             </div>
           ))}
         </div>
+
+        {propinaIdx === 3 && (
+          <div className="animate-fade-in" style={{ marginBottom: '16px' }}>
+            <label style={{ fontSize: '13px', color: 'var(--text-2)', display: 'block', marginBottom: '6px', fontWeight: '600' }}>
+              Monto de Propina personalizado (S/)
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.10"
+              placeholder="0.00"
+              value={propinaOtros}
+              onChange={(e) => setPropinaOtros(e.target.value)}
+              style={{
+                width: '100%',
+                background: 'var(--surface)',
+                border: '1.5px solid var(--border-2)',
+                borderRadius: '12px',
+                color: 'var(--text-1)',
+                padding: '14px 16px',
+                fontSize: '16px',
+                outline: 'none',
+                fontFamily: 'inherit',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
+        )}
 
         <div className="section-label" style={{ marginTop: '24px' }}>Método de pago</div>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -142,9 +212,10 @@ export default function Resumen() {
         <button
           className="wf-btn-solid"
           style={{ width: '100%', padding: '16px', margin: 0, fontSize: '16px' }}
-          onClick={() => alert(`Pagando S/ ${totalFinal.toFixed(2)}`)}
+          onClick={handlePagar}
+          disabled={pagando}
         >
-          Pagar S/ {totalFinal.toFixed(2)}
+          {pagando ? 'Procesando pago...' : `Pagar S/ ${totalFinal.toFixed(2)}`}
         </button>
       </div>
     </>

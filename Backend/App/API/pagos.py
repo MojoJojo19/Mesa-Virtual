@@ -9,7 +9,7 @@ router = APIRouter(prefix="/api/pagos", tags=["Pagos"])
 
 @router.post("/", response_model=PagoResponse)
 def crear_pago(datos: PagoCreate, db: Session = Depends(get_db)):
-    from App.Models.pedido import Pedido
+    from App.Models.pedido import Pedido, EstadoPedido
     pedido = db.query(Pedido).filter(Pedido.id_pedido == datos.id_pedido).first()
     if not pedido:
         raise HTTPException(status_code=404, detail="Pedido no encontrado")

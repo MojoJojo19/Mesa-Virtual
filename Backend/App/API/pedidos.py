@@ -12,13 +12,41 @@ router = APIRouter(prefix="/api/pedidos", tags=["Pedidos"])
 @router.post("/", response_model=PedidoResponse)
 def crear_pedido(datos: PedidoCreate, db: Session = Depends(get_db)):
     from App.Models.mesa import Mesa
+    from App.Models.detalle_pedido import DetallePedido
+    from App.Models.producto import Producto
+
     mesa = db.query(Mesa).filter(Mesa.id_mesa == datos.id_mesa).first()
     if not mesa:
         raise HTTPException(status_code=404, detail="Mesa no encontrada")
-    nuevo = Pedido(**datos.model_dump(), id_restaurante=mesa.id_restaurante)
+
+    dict_datos = datos.model_dump()
+    items_datos = dict_datos.pop("items", None)
+
+    nuevo = Pedido(**dict_datos, id_restaurante=mesa.id_restaurante, estado=EstadoPedido.pendiente)
     db.add(nuevo)
     db.commit()
     db.refresh(nuevo)
+
+    if items_datos:
+        for item in items_datos:
+            id_prod = item["id_producto"]
+            cant = item["cantidad"]
+            producto = db.query(Producto).filter(Producto.id_producto == id_prod).first()
+            if not producto:
+                continue
+            precio = producto.precio
+            subtotal = precio * cant
+            detalle = DetallePedido(
+                id_pedido=nuevo.id_pedido,
+                id_producto=id_prod,
+                cantidad=cant,
+                precio_unitario=precio,
+                subtotal=subtotal
+            )
+            db.add(detalle)
+        db.commit()
+        db.refresh(nuevo)
+
     return nuevo
 
 @router.get("/", response_model=List[PedidoResponse])

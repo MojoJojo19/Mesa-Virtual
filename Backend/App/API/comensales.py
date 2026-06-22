@@ -10,10 +10,14 @@ router = APIRouter(prefix="/api/comensales", tags=["Comensales"])
 
 @router.post("/", response_model=ComensalResponse)
 def crear_comensal(datos: ComensalCreate, db: Session = Depends(get_db)):
-    from App.Models.mesa import Mesa
+    from App.Models.mesa import Mesa, EstadoMesa
     mesa = db.query(Mesa).filter(Mesa.id_mesa == datos.id_mesa).first()
     if not mesa:
         raise HTTPException(status_code=404, detail="Mesa no encontrada")
+    
+    # Cambiar el estado de la mesa a 'ocupada' al ingresar el comensal (HU-01)
+    mesa.estado = EstadoMesa.ocupada
+    
     nuevo = Comensal(**datos.model_dump(), id_restaurante=mesa.id_restaurante)
     db.add(nuevo)
     db.commit()

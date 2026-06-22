@@ -1,5 +1,6 @@
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel
+from App.Schemas.comensal import ComensalResponse
 
 class MesaCreate(BaseModel):
     numero: int
@@ -18,6 +19,7 @@ class MesaResponse(BaseModel):
     estado: str
     codigo_qr: Optional[str] = None
     restaurante: Optional[RestauranteMini] = None
+    comensales: Optional[List[ComensalResponse]] = None
 
     class Config:
         from_attributes = True

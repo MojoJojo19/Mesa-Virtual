@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Users, Copy, Share } from 'lucide-react'
 import { useToast } from '../components/Toast'
+import { getComensalesDeMesa, getMesa } from '../services/api'
 
 export default function Lobby() {
   const { idMesa } = useParams()
@@ -15,14 +16,56 @@ export default function Lobby() {
     { nombre: user.nombre || 'Carlos', avatar: user.avatar || '🐱', isLider },
     { nombre: 'Ana', avatar: '🐶', isLider: false }
   ])
+  const [pinMesa, setPinMesa] = useState('----')
+  const [numeroMesa, setNumeroMesa] = useState(localStorage.getItem('swifttable_numero_mesa') || idMesa)
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setConectados(prev => [...prev, { nombre: 'Luis', avatar: '🦊', isLider: false }])
-      toast('Luis se unió a la mesa', 'info')
+      setConectados(prev => {
+        if (prev.length <= 2 && prev.some(c => c.nombre === 'Ana')) {
+          toast('Luis se unió a la mesa', 'info')
+          return [...prev, { nombre: 'Luis', avatar: '🦊', isLider: false }]
+        }
+        return prev
+      })
     }, 4000)
     return () => clearTimeout(timer)
   }, [toast])
+
+  useEffect(() => {
+    const verificarEstadoYComensales = async () => {
+      try {
+        const mesaInfo = await getMesa(idMesa)
+        if (mesaInfo) {
+          if (mesaInfo.estado === 'libre') {
+            toast('Mesa liberada por administración. Sesión finalizada.', 'info')
+            localStorage.removeItem('swifttable_carrito')
+            localStorage.removeItem('swifttable_user')
+            navigate(`/mesa/${idMesa}`)
+            return
+          }
+          setPinMesa(mesaInfo.pin || '----')
+          setNumeroMesa(mesaInfo.numero || idMesa)
+        }
+
+        const dbComensales = await getComensalesDeMesa(idMesa)
+        if (dbComensales && dbComensales.length > 0) {
+          const list = dbComensales.map((c, i) => ({
+            nombre: c.nombre,
+            avatar: c.avatar || '🐱',
+            isLider: i === 0
+          }))
+          setConectados(list)
+        }
+      } catch (err) {
+        console.error(err)
+      }
+    }
+
+    verificarEstadoYComensales()
+    const interval = setInterval(verificarEstadoYComensales, 4000)
+    return () => clearInterval(interval)
+  }, [idMesa, navigate, toast])
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(`swifttable.com/mesa/${idMesa}`)
@@ -35,7 +78,7 @@ export default function Lobby() {
     <>
       <div className="native-app-bar">
         <div className="left-action"></div>
-        <div className="title">{restName}</div>
+        <div className="title">{restName} - Mesa {numeroMesa}</div>
         <div className="right-action">
           <button className="wf-btn-ghost" onClick={handleCopyLink} style={{ padding: 0 }}>
             <Share size={24} color="var(--accent)" />
@@ -45,14 +88,7 @@ export default function Lobby() {
 
       <div className="content-wrapper">
         
-        <div style={{ textAlign: 'center', margin: '24px 0 32px' }}>
-          <div className="section-label">Código de la Mesa</div>
-          <div style={{ fontSize: '48px', fontWeight: '800', letterSpacing: '0.1em', color: 'var(--text-1)' }}>
-            7823
-          </div>
-        </div>
-
-        <div className="section-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="section-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '16px' }}>
           <Users size={16} /> {conectados.length} Personas conectadas
         </div>
 
@@ -83,9 +119,9 @@ export default function Lobby() {
         {isLider ? (
           <button 
             className="wf-btn-solid" 
-            onClick={() => navigate(`/mesa/${idMesa}/pago-modo`)}
+            onClick={() => navigate(`/mesa/${idMesa}/menu`)}
           >
-            Configurar pago e Iniciar
+            Empezar a Pedir
           </button>
         ) : (
           <button 

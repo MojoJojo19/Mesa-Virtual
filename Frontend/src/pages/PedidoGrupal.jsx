@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ChevronLeft, Users, Check, Clock } from 'lucide-react'
+import { useToast } from '../components/Toast'
+import { enviarPedido, getMesa } from '../services/api'
 
 export default function PedidoGrupal() {
   const { idMesa } = useParams()
   const navigate = useNavigate()
+  const { toast } = useToast()
 
   const user = JSON.parse(localStorage.getItem('swifttable_user') || '{"nombre":"Carlos","avatar":"🐱","isLider":true}')
   const isLider = user.isLider || false
@@ -19,7 +22,7 @@ export default function PedidoGrupal() {
     },
     {
       id: 'u2', nombre: 'Ana', avatar: '🐶', estado: 'listo', isLider: false,
-      items: [{ nombre: '1/2 Pollo a la Brasa', cantidad: 1, precio: 37.00 }], total: 37.00
+      items: [{ id_producto: 2, nombre: 'Pollo a la brasa 1/2', cantidad: 1, precio: 32.00 }], total: 32.00
     },
     {
       id: 'u3', nombre: 'Luis', avatar: '🦊', estado: 'eligiendo', isLider: false,
@@ -27,15 +30,69 @@ export default function PedidoGrupal() {
     }
   ])
 
+  const [enviando, setEnviando] = useState(false)
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setPedidosMesa(prev => prev.map(p => {
-        if (p.id === 'u3') return { ...p, estado: 'listo', items: [{ nombre: '1/4 Pollo', cantidad: 1, precio: 23.00 }], total: 23.00 }
+        if (p.id === 'u3') return { ...p, estado: 'listo', items: [{ id_producto: 1, nombre: 'Pollo a la brasa 1/4', cantidad: 1, precio: 18.00 }], total: 18.00 }
         return p
       }))
     }, 5000)
     return () => clearTimeout(timer)
   }, [])
+
+  useEffect(() => {
+    const verificarMesa = async () => {
+      try {
+        const mesaInfo = await getMesa(idMesa)
+        if (mesaInfo && mesaInfo.estado === 'libre') {
+          toast('Mesa liberada por administración. Sesión finalizada.', 'info')
+          localStorage.removeItem('swifttable_carrito')
+          localStorage.removeItem('swifttable_user')
+          navigate(`/mesa/${idMesa}`)
+        }
+      } catch (e) {
+        console.error(e)
+      }
+    }
+    
+    verificarMesa()
+    const interval = setInterval(verificarMesa, 4000)
+    return () => clearInterval(interval)
+  }, [idMesa, navigate, toast])
+
+  const handleEnviarPedido = async () => {
+    setEnviando(true)
+    try {
+      const todosItems = []
+      pedidosMesa.forEach(p => {
+        p.items.forEach(it => {
+          const existente = todosItems.find(x => x.id_producto === it.id_producto)
+          if (existente) {
+            existente.cantidad += it.cantidad
+          } else if (it.id_producto) {
+            todosItems.push({ id_producto: it.id_producto, cantidad: it.cantidad })
+          }
+        })
+      })
+
+      if (todosItems.length === 0) {
+        toast('No hay productos en el pedido', 'error')
+        setEnviando(false)
+        return
+      }
+
+      const res = await enviarPedido(idMesa, todosItems)
+      localStorage.setItem('swifttable_id_pedido', res.id_pedido)
+      toast('¡Pedido enviado a cocina exitosamente!', 'success')
+      navigate(`/mesa/${idMesa}/confirmado`)
+    } catch (err) {
+      toast('Error al enviar el pedido', 'error')
+    } finally {
+      setEnviando(false)
+    }
+  }
 
   const todosListos = pedidosMesa.every(p => p.estado === 'listo')
   const totalMesa = pedidosMesa.reduce((sum, p) => sum + p.total, 0)
@@ -112,10 +169,10 @@ export default function PedidoGrupal() {
         {isLider ? (
           <button 
             className="wf-btn-solid" 
-            onClick={() => navigate(`/mesa/${idMesa}/confirmado`)}
-            disabled={!todosListos}
+            onClick={handleEnviarPedido}
+            disabled={!todosListos || enviando}
           >
-            {todosListos ? 'Enviar Pedido a Cocina' : 'Esperando a los demás...'}
+            {enviando ? 'Enviando...' : (todosListos ? 'Enviar Pedido a Cocina' : 'Esperando a los demás...')}
           </button>
         ) : (
           <div style={{ width: '100%', textAlign: 'center', padding: '16px', fontSize: '14px', color: 'var(--text-2)', fontWeight: '500' }}>

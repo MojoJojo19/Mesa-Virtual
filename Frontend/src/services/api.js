@@ -51,7 +51,7 @@ export const MOCK_MESA = {
 
 // ─── Helper para evitar esperas largas si el backend no responde ───
 const fetchWithTimeout = async (url, options = {}) => {
-  const { timeout = 1500, ...rest } = options;
+  const { timeout = 5000, ...rest } = options;
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
   const response = await fetch(url, { ...rest, signal: controller.signal });
@@ -130,6 +130,16 @@ export const crearComensal = async (nombre, avatar, idMesa) => {
   }
 }
 
+export const getComensalesDeMesa = async (idMesa) => {
+  try {
+    const res = await fetchWithTimeout(`${API_URL}/mesas/${idMesa}/comensales`)
+    if (!res.ok) throw new Error('Error')
+    return await res.json()
+  } catch {
+    return []
+  }
+}
+
 export const enviarPedido = async (idMesa, items) => {
   try {
     const res = await fetchWithTimeout(`${API_URL}/pedidos/`, {
@@ -140,7 +150,7 @@ export const enviarPedido = async (idMesa, items) => {
     if (!res.ok) throw new Error('Error')
     return await res.json()
   } catch {
-    return { id_pedido: Date.now(), estado: 'en_preparacion' }
+    return { id_pedido: Date.now(), estado: 'pendiente' }
   }
 }
 

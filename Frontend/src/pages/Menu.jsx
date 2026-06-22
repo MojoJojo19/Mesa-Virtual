@@ -62,6 +62,26 @@ export default function Menu() {
   }, [idMesa, toast])
 
   useEffect(() => {
+    const verificarMesa = async () => {
+      try {
+        const mesaInfo = await getMesa(idMesa)
+        if (mesaInfo && mesaInfo.estado === 'libre') {
+          toast('Mesa liberada por administración. Sesión finalizada.', 'info')
+          localStorage.removeItem('swifttable_carrito')
+          localStorage.removeItem('swifttable_user')
+          navigate(`/mesa/${idMesa}`)
+        }
+      } catch (e) {
+        console.error(e)
+      }
+    }
+    
+    verificarMesa()
+    const interval = setInterval(verificarMesa, 4000)
+    return () => clearInterval(interval)
+  }, [idMesa, navigate, toast])
+
+  useEffect(() => {
     const prevCart = localStorage.getItem('swifttable_carrito')
     if (prevCart) setCarrito(JSON.parse(prevCart))
   }, [])

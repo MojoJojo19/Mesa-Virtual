@@ -92,7 +92,7 @@ export default function PedidoEnviado() {
       }
 
       const mesaInfo = await getMesa(idMesa)
-      if (mesaInfo && (mesaInfo.estado === 'libre' || !mesaInfo.comensales || mesaInfo.comensales.length === 0)) {
+      if (mesaInfo && mesaInfo.estado === 'libre') {
         toast('Mesa liberada por administración. Sesión finalizada.', 'info')
         localStorage.removeItem('swifttable_carrito')
         localStorage.removeItem('swifttable_user')

@@ -1,46 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { QrCode, ScanLine, Flame, AlertTriangle } from 'lucide-react'
-import { getMesa } from '../services/api'
+import { QrCode, Flame } from 'lucide-react'
 
 export default function Bienvenida() {
   const { idMesa } = useParams()
   const navigate = useNavigate()
-  const [nombreRestaurante, setNombreRestaurante] = useState('Cargando...')
-  const [errorMesa, setErrorMesa] = useState(false)
-
-  useEffect(() => {
-    const cargarDetallesMesa = async () => {
-      try {
-        const mesa = await getMesa(idMesa)
-        // Si el backend responde o el mock nos da un objeto
-        if (mesa && mesa.id_mesa) {
-          const restName = mesa.restaurante ? mesa.restaurante.nombre : (mesa.nombre_restaurante ? mesa.nombre_restaurante : 'La Fogata')
-          setNombreRestaurante(restName)
-          localStorage.setItem('swifttable_nombre_restaurante', restName)
-        } else {
-          setErrorMesa(true)
-        }
-      } catch (err) {
-        console.error("Error cargando mesa:", err)
-        setErrorMesa(true)
-      }
-    }
-    cargarDetallesMesa()
-  }, [idMesa])
-
-  if (errorMesa) {
-    return (
-      <div className="content-wrapper flex-col" style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '24px', minHeight: '80vh' }}>
-        <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'var(--red-bg)', color: 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
-          <AlertTriangle size={36} />
-        </div>
-        <h2 className="title-large" style={{ fontSize: '24px', color: 'var(--text-1)', marginBottom: '8px' }}>Mesa no válida</h2>
-        <p style={{ fontSize: '14px', color: 'var(--text-2)', marginBottom: '32px' }}>El código QR escaneado no corresponde a ninguna mesa activa del sistema.</p>
-        <button className="wf-btn-solid" onClick={() => navigate('/')}>Volver al Selector</button>
-      </div>
-    )
-  }
 
   return (
     <>
@@ -64,11 +28,11 @@ export default function Bienvenida() {
           }}>
             <Flame size={40} strokeWidth={2} />
           </div>
-          <h1 className="title-large" style={{ fontSize: '36px', letterSpacing: '-0.03em', color: 'var(--text-1)', marginBottom: '4px' }}>
-            {nombreRestaurante}
+          <h1 className="title-large" style={{ fontSize: '32px', letterSpacing: '-0.03em', color: 'var(--text-1)', marginBottom: '4px' }}>
+            Mesa Virtual
           </h1>
-          <p style={{ fontSize: '16px', color: 'var(--text-2)', fontWeight: '500' }}>
-            Mesa {idMesa}
+          <p style={{ fontSize: '15px', color: 'var(--text-2)', fontWeight: '500' }}>
+            Bienvenido al Sistema de Pedidos
           </p>
         </div>
 
@@ -96,7 +60,6 @@ export default function Bienvenida() {
           </p>
           
           <div style={{ position: 'relative', width: '140px', height: '140px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {/* Esquinas del scanner simuladas */}
             <div style={{ position: 'absolute', top: 0, left: 0, width: '30px', height: '30px', borderTop: '3px solid var(--accent)', borderLeft: '3px solid var(--accent)', borderRadius: '8px 0 0 0' }} />
             <div style={{ position: 'absolute', top: 0, right: 0, width: '30px', height: '30px', borderTop: '3px solid var(--accent)', borderRight: '3px solid var(--accent)', borderRadius: '0 8px 0 0' }} />
             <div style={{ position: 'absolute', bottom: 0, left: 0, width: '30px', height: '30px', borderBottom: '3px solid var(--accent)', borderLeft: '3px solid var(--accent)', borderRadius: '0 0 0 8px' }} />
@@ -104,7 +67,6 @@ export default function Bienvenida() {
             
             <QrCode size={64} color="var(--text-1)" strokeWidth={1} style={{ opacity: 0.8 }} />
             
-            {/* Scanning line animation css */}
             <div style={{ position: 'absolute', top: '10%', left: '10%', right: '10%', height: '2px', background: 'var(--accent)', boxShadow: '0 0 8px var(--accent)', animation: 'scan 2.5s ease-in-out infinite' }} />
           </div>
           
@@ -122,7 +84,6 @@ export default function Bienvenida() {
           <button 
             className="wf-btn-solid" 
             onClick={() => navigate(`/mesa/${idMesa}/pin`)}
-            disabled={nombreRestaurante === 'Cargando...'}
           >
             Ingresar a la Mesa
           </button>

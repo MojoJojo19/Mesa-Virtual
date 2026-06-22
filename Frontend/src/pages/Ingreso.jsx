@@ -1,7 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { User, ChevronLeft } from 'lucide-react'
-import { crearComensal } from '../services/api'
+import { crearComensal, getMesa } from '../services/api'
 import { useToast } from '../components/Toast'
 
 const AVATARES = ['🐶', '🐱', '🦊', '🐸', '🦁', '🐻', '🐼', '🐨', '🐯', '🐮', '🐷', '🐵']
@@ -14,6 +14,22 @@ export default function Ingreso() {
   const [nombre, setNombre] = useState('')
   const [avatar, setAvatar] = useState('🐱')
   const [cargando, setCargando] = useState(false)
+
+  useEffect(() => {
+    const cargarDetallesMesa = async () => {
+      try {
+        const mesa = await getMesa(idMesa)
+        if (mesa) {
+          const restName = mesa.restaurante ? mesa.restaurante.nombre : (mesa.nombre_restaurante ? mesa.nombre_restaurante : 'La Fogata')
+          localStorage.setItem('swifttable_nombre_restaurante', restName)
+          localStorage.setItem('swifttable_numero_mesa', mesa.numero)
+        }
+      } catch (err) {
+        console.error("Error al cargar la mesa tras ingreso:", err)
+      }
+    }
+    cargarDetallesMesa()
+  }, [idMesa])
 
   const handleUnirse = async () => {
     if (!nombre.trim()) {
