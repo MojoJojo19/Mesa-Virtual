@@ -3,15 +3,15 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { ChevronLeft, Smartphone, CreditCard, Banknote } from 'lucide-react'
 
 const METODOS_PAGO = [
-  { id: 'yape',     label: 'Yape / Plin', sub: 'Pago instantáneo por QR', icon: Smartphone, color: '#8b5cf6' },
-  { id: 'tarjeta',  label: 'Tarjeta',     sub: 'Visa, Mastercard', icon: CreditCard, color: '#3b82f6' },
-  { id: 'efectivo', label: 'Efectivo',    sub: 'El mesero traerá el vuelto', icon: Banknote, color: '#10b981' }
+  { id: 'yape', label: 'Yape / Plin', sub: 'Pago instantáneo por QR', icon: Smartphone, color: '#8b5cf6' },
+  { id: 'tarjeta', label: 'Tarjeta', sub: 'Visa, Mastercard', icon: CreditCard, color: '#3b82f6' },
+  { id: 'efectivo', label: 'Efectivo', sub: 'El mesero traerá el vuelto', icon: Banknote, color: '#10b981' }
 ]
 
 export default function Resumen() {
   const { idMesa } = useParams()
   const navigate = useNavigate()
-  
+
   const [metodoPago, setMetodoPago] = useState('yape')
   const [propinaIdx, setPropinaIdx] = useState(1) // 0=0%, 1=5%, 2=10%
 
@@ -23,7 +23,7 @@ export default function Resumen() {
 
   const pedidosMesa = [
     { nombre: user.nombre, isLider: user.isLider, precio: miTotal },
-    { nombre: 'Ana',  isLider: false, precio: 37.00 },
+    { nombre: 'Ana', isLider: false, precio: 37.00 },
     { nombre: 'Luis', isLider: false, precio: 23.00 },
   ]
 
@@ -49,7 +49,7 @@ export default function Resumen() {
       </div>
 
       <div className="content-wrapper">
-        
+
         <div style={{ padding: '24px 0 16px', textAlign: 'center' }}>
           <div style={{ fontSize: '15px', color: 'var(--text-2)' }}>Total a Pagar</div>
           <div style={{ fontSize: '48px', fontWeight: '800', letterSpacing: '-0.03em' }}>
@@ -69,7 +69,7 @@ export default function Resumen() {
           </div>
           {propinaMonto > 0 && (
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '15px' }}>
-              <span style={{ color: 'var(--text-2)' }}>Propina ({(pctPropina*100).toFixed(0)}%)</span>
+              <span style={{ color: 'var(--text-2)' }}>Propina ({(pctPropina * 100).toFixed(0)}%)</span>
               <span>S/ {propinaMonto.toFixed(2)}</span>
             </div>
           )}
@@ -78,12 +78,12 @@ export default function Resumen() {
         <div className="section-label">Propina sugerida</div>
         <div className="segmented-control">
           {[0, 0.05, 0.10].map((val, idx) => (
-            <div 
+            <div
               key={idx}
               className={`segment-btn ${propinaIdx === idx ? 'active' : ''}`}
               onClick={() => setPropinaIdx(idx)}
             >
-              {val === 0 ? 'Nada' : `${val*100}%`}
+              {val === 0 ? 'Nada' : `${val * 100}%`}
             </div>
           ))}
         </div>
@@ -93,7 +93,7 @@ export default function Resumen() {
           {METODOS_PAGO.map(m => {
             const isSelected = metodoPago === m.id
             return (
-              <div 
+              <div
                 key={m.id}
                 className={`pago-option ${isSelected ? 'selected' : ''}`}
                 onClick={() => setMetodoPago(m.id)}
@@ -113,8 +113,8 @@ export default function Resumen() {
       </div>
 
       <div className="native-bottom-bar">
-        <button 
-          className="wf-btn-solid" 
+        <button
+          className="wf-btn-solid"
           onClick={() => alert(`Pagando S/ ${totalFinal.toFixed(2)}`)}
         >
           Pagar S/ {totalFinal.toFixed(2)}
