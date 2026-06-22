@@ -41,6 +41,8 @@ export default function PedidoGrupal() {
   const totalMesa = pedidosMesa.reduce((sum, p) => sum + p.total, 0)
   const totalItems = pedidosMesa.reduce((sum, p) => sum + p.items.reduce((s, i) => s + i.cantidad, 0), 0)
 
+  const restName = localStorage.getItem('swifttable_nombre_restaurante') || 'SwiftTable'
+
   return (
     <>
       <div className="native-app-bar">
@@ -49,7 +51,7 @@ export default function PedidoGrupal() {
             <ChevronLeft size={28} color="var(--accent)" />
           </button>
         </div>
-        <div className="title">Revisar Pedido</div>
+        <div className="title">{restName}</div>
         <div className="right-action"></div>
       </div>
 

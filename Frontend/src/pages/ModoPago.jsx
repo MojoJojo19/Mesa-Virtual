@@ -24,6 +24,8 @@ export default function ModoPago() {
     navigate(`/mesa/${idMesa}/menu`)
   }
 
+  const restName = localStorage.getItem('swifttable_nombre_restaurante') || 'SwiftTable'
+
   return (
     <>
       <div className="native-app-bar">
@@ -32,7 +34,7 @@ export default function ModoPago() {
             <ChevronLeft size={28} color="var(--accent)" />
           </button>
         </div>
-        <div className="title">Modo de Pago</div>
+        <div className="title">{restName}</div>
         <div className="right-action"></div>
       </div>
 

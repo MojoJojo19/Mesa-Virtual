@@ -7,3 +7,5 @@ from .asistencia import Asistencia
 from .pedido import Pedido
 from .detalle_pedido import DetallePedido
 from .pago import Pago
+from .restaurante import Restaurante
+

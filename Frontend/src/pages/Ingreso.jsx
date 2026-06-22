@@ -40,6 +40,8 @@ export default function Ingreso() {
     }
   }
 
+  const restName = localStorage.getItem('swifttable_nombre_restaurante') || 'SwiftTable'
+
   return (
     <>
       <div className="native-app-bar">
@@ -48,7 +50,7 @@ export default function Ingreso() {
             <ChevronLeft size={28} color="var(--accent)" />
           </button>
         </div>
-        <div className="title">Identificación</div>
+        <div className="title">{restName}</div>
         <div className="right-action"></div>
       </div>
 

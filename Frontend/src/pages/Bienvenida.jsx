@@ -1,10 +1,46 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { QrCode, ScanLine, Flame } from 'lucide-react'
+import { QrCode, ScanLine, Flame, AlertTriangle } from 'lucide-react'
+import { getMesa } from '../services/api'
 
 export default function Bienvenida() {
   const { idMesa } = useParams()
   const navigate = useNavigate()
+  const [nombreRestaurante, setNombreRestaurante] = useState('Cargando...')
+  const [errorMesa, setErrorMesa] = useState(false)
+
+  useEffect(() => {
+    const cargarDetallesMesa = async () => {
+      try {
+        const mesa = await getMesa(idMesa)
+        // Si el backend responde o el mock nos da un objeto
+        if (mesa && mesa.id_mesa) {
+          const restName = mesa.restaurante ? mesa.restaurante.nombre : (mesa.nombre_restaurante ? mesa.nombre_restaurante : 'La Fogata')
+          setNombreRestaurante(restName)
+          localStorage.setItem('swifttable_nombre_restaurante', restName)
+        } else {
+          setErrorMesa(true)
+        }
+      } catch (err) {
+        console.error("Error cargando mesa:", err)
+        setErrorMesa(true)
+      }
+    }
+    cargarDetallesMesa()
+  }, [idMesa])
+
+  if (errorMesa) {
+    return (
+      <div className="content-wrapper flex-col" style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '24px', minHeight: '80vh' }}>
+        <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'var(--red-bg)', color: 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
+          <AlertTriangle size={36} />
+        </div>
+        <h2 className="title-large" style={{ fontSize: '24px', color: 'var(--text-1)', marginBottom: '8px' }}>Mesa no válida</h2>
+        <p style={{ fontSize: '14px', color: 'var(--text-2)', marginBottom: '32px' }}>El código QR escaneado no corresponde a ninguna mesa activa del sistema.</p>
+        <button className="wf-btn-solid" onClick={() => navigate('/')}>Volver al Selector</button>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -28,8 +64,8 @@ export default function Bienvenida() {
           }}>
             <Flame size={40} strokeWidth={2} />
           </div>
-          <h1 className="title-large" style={{ fontSize: '40px', letterSpacing: '-0.03em', color: 'var(--text-1)', marginBottom: '4px' }}>
-            La Fogata
+          <h1 className="title-large" style={{ fontSize: '36px', letterSpacing: '-0.03em', color: 'var(--text-1)', marginBottom: '4px' }}>
+            {nombreRestaurante}
           </h1>
           <p style={{ fontSize: '16px', color: 'var(--text-2)', fontWeight: '500' }}>
             Mesa {idMesa}
@@ -56,7 +92,7 @@ export default function Bienvenida() {
           
           <div className="section-label" style={{ color: 'var(--accent)', fontWeight: '800' }}>Empezar a pedir</div>
           <p style={{ fontSize: '15px', color: 'var(--text-2)', marginBottom: '24px', lineHeight: 1.5 }}>
-            Abre tu cámara y enfoca el código QR en el centro de tu mesa
+            Ingresa a la mesa utilizando el PIN de seguridad impreso en el acrílico físico de tu mesa.
           </p>
           
           <div style={{ position: 'relative', width: '140px', height: '140px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -81,21 +117,14 @@ export default function Bienvenida() {
           `}</style>
         </div>
 
-        {/* Botones secundarios */}
+        {/* Botón de Acceso Principal */}
         <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <button 
             className="wf-btn-solid" 
             onClick={() => navigate(`/mesa/${idMesa}/pin`)}
+            disabled={nombreRestaurante === 'Cargando...'}
           >
-            Tengo un PIN de mesa
-          </button>
-
-          <button 
-            className="wf-btn-ghost" 
-            style={{ width: '100%', color: 'var(--text-3)' }}
-            onClick={() => navigate(`/mesa/${idMesa}/ingreso`)}
-          >
-            Saltar PIN (Dev Mode)
+            Ingresar a la Mesa
           </button>
         </div>
 

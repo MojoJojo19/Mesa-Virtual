@@ -1,7 +1,8 @@
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from App.DataBase.connection import get_db
-from App.Models.mesa import Mesa
+from App.Models.mesa import Mesa, EstadoMesa
 from App.Models.comensal import Comensal
 from App.Schemas.mesa import (
     MesaCreate, MesaResponse, MesaCreateResponse,
@@ -15,9 +16,9 @@ router = APIRouter(prefix="/api/mesas", tags=["Mesas"])
 
 
 @router.post("/", response_model=MesaCreateResponse)
-def crear_mesa(datos: MesaCreate, db: Session = Depends(get_db)):
+def crear_mesa(datos: MesaCreate, id_restaurante: int, db: Session = Depends(get_db)):
     # 1. Crear mesa en BD (sin QR ni PIN al principio)
-    nuevo = Mesa(**datos.model_dump())
+    nuevo = Mesa(**datos.model_dump(), id_restaurante=id_restaurante)
     db.add(nuevo)
     db.commit()
     db.refresh(nuevo)
@@ -31,9 +32,12 @@ def crear_mesa(datos: MesaCreate, db: Session = Depends(get_db)):
     return nuevo
 
 
-@router.get("/", response_model=list[MesaResponse])
-def listar_mesas(db: Session = Depends(get_db)):
-    return db.query(Mesa).all()
+@router.get("/", response_model=List[MesaResponse])
+def listar_mesas(id_restaurante: int = None, db: Session = Depends(get_db)):
+    query = db.query(Mesa)
+    if id_restaurante is not None:
+        query = query.filter(Mesa.id_restaurante == id_restaurante)
+    return query.all()
 
 
 @router.get("/{id_mesa}", response_model=MesaResponse)
@@ -63,7 +67,7 @@ def validar_pin(id_mesa: int, datos: ValidarPinRequest, db: Session = Depends(ge
     return {"valido": mesa.pin == datos.pin}
 
 
-@router.get("/{id_mesa}/comensales", response_model=list[ComensalResponse])
+@router.get("/{id_mesa}/comensales", response_model=List[ComensalResponse])
 def listar_comensales_de_mesa(id_mesa: int, db: Session = Depends(get_db)):
     """
     Endpoint para el Lobby: devuelve los comensales reales unidos a la mesa,
@@ -73,3 +77,31 @@ def listar_comensales_de_mesa(id_mesa: int, db: Session = Depends(get_db)):
     if not mesa:
         raise HTTPException(status_code=404, detail="Mesa no encontrada")
     return db.query(Comensal).filter(Comensal.id_mesa == id_mesa).all()
+
+
+@router.post("/{id_mesa}/liberar", response_model=MesaResponse)
+def liberar_mesa(id_mesa: int, db: Session = Depends(get_db)):
+    mesa = db.query(Mesa).filter(Mesa.id_mesa == id_mesa).first()
+    if not mesa:
+        raise HTTPException(status_code=404, detail="Mesa no encontrada")
+    
+    # 1. Cambiar estado a libre
+    mesa.estado = EstadoMesa.libre
+    # 2. Generar un nuevo PIN aleatorio
+    mesa.pin = generar_pin()
+    # 3. Eliminar los comensales asociados a esta mesa (limpiar la sesión)
+    mesa.comensales.clear()
+    
+    # 4. Marcar pedidos activos como pagados para cerrar la cuenta de la mesa
+    from App.Models.pedido import Pedido, EstadoPedido
+    pedidos_activos = db.query(Pedido).filter(
+        Pedido.id_mesa == id_mesa,
+        Pedido.estado.in_([EstadoPedido.pendiente, EstadoPedido.en_preparacion, EstadoPedido.servido])
+    ).all()
+    for ped in pedidos_activos:
+        ped.estado = EstadoPedido.pagado
+    
+    db.commit()
+    db.refresh(mesa)
+    return mesa
+

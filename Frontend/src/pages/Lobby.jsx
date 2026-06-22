@@ -29,11 +29,13 @@ export default function Lobby() {
     toast('Enlace copiado al portapapeles', 'success')
   }
 
+  const restName = localStorage.getItem('swifttable_nombre_restaurante') || 'SwiftTable'
+
   return (
     <>
       <div className="native-app-bar">
         <div className="left-action"></div>
-        <div className="title">Sala de Espera</div>
+        <div className="title">{restName}</div>
         <div className="right-action">
           <button className="wf-btn-ghost" onClick={handleCopyLink} style={{ padding: 0 }}>
             <Share size={24} color="var(--accent)" />

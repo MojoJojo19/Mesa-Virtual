@@ -13,7 +13,7 @@ def generar_qr_mesa(id_mesa: int) -> str:
     """
     # Esta es la URL a la que el cliente irá cuando escanee el QR con su cámara
     # Cambiaremos esto cuando el frontend esté listo
-    url_mesa = f"http://localhost:3000/mesa/{id_mesa}"
+    url_mesa = f"http://localhost:5173/mesa/{id_mesa}"
     
     # Configurar la estética del QR
     qr = qrcode.QRCode(

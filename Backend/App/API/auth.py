@@ -23,8 +23,14 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     # Si todo está bien, creamos el token
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = crear_token_acceso(
-        data={"sub": usuario.correo, "rol": usuario.rol.value}, 
+        data={"sub": usuario.correo, "rol": usuario.rol.value, "id_restaurante": usuario.id_restaurante}, 
         expires_delta=access_token_expires
     )
     
-    return {"access_token": access_token, "token_type": "bearer", "rol": usuario.rol}
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "rol": usuario.rol,
+        "id_restaurante": usuario.id_restaurante,
+        "nombre_restaurante": usuario.restaurante.nombre if usuario.restaurante else "SwiftTable"
+    }

@@ -12,6 +12,8 @@ import Menu            from './pages/Menu'
 import PedidoGrupal    from './pages/PedidoGrupal'
 import PedidoEnviado   from './pages/PedidoEnviado'
 import Resumen         from './pages/Resumen'
+import Logistica       from './pages/Logistica'
+import SelectorRol     from './pages/SelectorRol'
 
 function AppInner() {
   const location = useLocation()
@@ -20,7 +22,7 @@ function AppInner() {
     <div className="app-container">
       {/* StepBar is temporarily hidden for native feel, or we can leave it. I'll remove it from the global scope to let headers handle navigation natively. */}
       <Routes>
-        <Route path="/"                          element={<Navigate to="/mesa/7" replace />} />
+        <Route path="/"                          element={<SelectorRol />} />
         <Route path="/mesa/:idMesa"              element={<Bienvenida />} />
         <Route path="/mesa/:idMesa/pin"          element={<PinIngreso />} />
         <Route path="/mesa/:idMesa/acceso"       element={<AccesoConfirmado />} />
@@ -31,6 +33,7 @@ function AppInner() {
         <Route path="/mesa/:idMesa/pedido-grupo" element={<PedidoGrupal />} />
         <Route path="/mesa/:idMesa/confirmado"   element={<PedidoEnviado />} />
         <Route path="/mesa/:idMesa/resumen"      element={<Resumen />} />
+        <Route path="/logistica"                 element={<Logistica />} />
       </Routes>
     </div>
   )

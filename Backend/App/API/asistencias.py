@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from App.DataBase.connection import get_db
@@ -9,19 +10,26 @@ router = APIRouter(prefix="/api/asistencias", tags=["Asistencias"])
 
 @router.post("/", response_model=AsistenciaResponse)
 def crear_asistencia(datos: AsistenciaCreate, db: Session = Depends(get_db)):
-    nuevo = Asistencia(**datos.model_dump())
+    from App.Models.mesa import Mesa
+    mesa = db.query(Mesa).filter(Mesa.id_mesa == datos.id_mesa).first()
+    if not mesa:
+        raise HTTPException(status_code=404, detail="Mesa no encontrada")
+    nuevo = Asistencia(**datos.model_dump(), id_restaurante=mesa.id_restaurante)
     db.add(nuevo)
     db.commit()
     db.refresh(nuevo)
     return nuevo
 
 
-@router.get("/", response_model=list[AsistenciaResponse])
-def listar_asistencias(db: Session = Depends(get_db)):
-    return db.query(Asistencia).all()
+@router.get("/", response_model=List[AsistenciaResponse])
+def listar_asistencias(id_restaurante: int = None, db: Session = Depends(get_db)):
+    query = db.query(Asistencia)
+    if id_restaurante is not None:
+        query = query.filter(Asistencia.id_restaurante == id_restaurante)
+    return query.all()
 
 
-@router.get("/mesa/{id_mesa}", response_model=list[AsistenciaResponse])
+@router.get("/mesa/{id_mesa}", response_model=List[AsistenciaResponse])
 def listar_asistencias_de_mesa(id_mesa: int, db: Session = Depends(get_db)):
     """Útil para el dashboard del mesero: ver llamados pendientes por mesa."""
     return db.query(Asistencia).filter(Asistencia.id_mesa == id_mesa).all()

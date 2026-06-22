@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from App.DataBase.connection import get_db
@@ -9,16 +10,23 @@ router = APIRouter(prefix="/api/comensales", tags=["Comensales"])
 
 @router.post("/", response_model=ComensalResponse)
 def crear_comensal(datos: ComensalCreate, db: Session = Depends(get_db)):
-    nuevo = Comensal(**datos.model_dump())
+    from App.Models.mesa import Mesa
+    mesa = db.query(Mesa).filter(Mesa.id_mesa == datos.id_mesa).first()
+    if not mesa:
+        raise HTTPException(status_code=404, detail="Mesa no encontrada")
+    nuevo = Comensal(**datos.model_dump(), id_restaurante=mesa.id_restaurante)
     db.add(nuevo)
     db.commit()
     db.refresh(nuevo)
     return nuevo
 
 
-@router.get("/", response_model=list[ComensalResponse])
-def listar_comensales(db: Session = Depends(get_db)):
-    return db.query(Comensal).all()
+@router.get("/", response_model=List[ComensalResponse])
+def listar_comensales(id_restaurante: int = None, db: Session = Depends(get_db)):
+    query = db.query(Comensal)
+    if id_restaurante is not None:
+        query = query.filter(Comensal.id_restaurante == id_restaurante)
+    return query.all()
 
 
 @router.get("/{id_comensal}", response_model=ComensalResponse)

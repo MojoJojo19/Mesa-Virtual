@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Enum
+from sqlalchemy import Column, Integer, String, Enum, ForeignKey
 from sqlalchemy.orm import relationship
 from App.DataBase.connection import Base
 import enum
@@ -17,9 +17,13 @@ class Usuario(Base):
 
     # Mapeo exacto de tu diagrama:
     id_usuario = Column(Integer, primary_key=True, autoincrement=True)
+    id_restaurante = Column(Integer, ForeignKey("restaurantes.id_restaurante", ondelete="CASCADE"), nullable=False, index=True)
     nombre = Column(String(100), nullable=False)
     correo = Column(String(150), unique=True, nullable=False)
     contrasena = Column(String(255), nullable=False)
     rol = Column(Enum(RolUsuario), nullable=False)
     estado = Column(Enum(EstadoUsuario), default=EstadoUsuario.activo)
+
+    # Relaciones
+    restaurante = relationship("Restaurante", back_populates="usuarios")
     pedidos = relationship("Pedido", back_populates="usuario")

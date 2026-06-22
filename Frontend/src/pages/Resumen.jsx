@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ChevronLeft, Smartphone, CreditCard, Banknote } from 'lucide-react'
+import { pedirCuenta } from '../services/api'
+import { useToast } from '../components/Toast'
 
 const METODOS_PAGO = [
   { id: 'yape', label: 'Yape / Plin', sub: 'Pago instantáneo por QR', icon: Smartphone, color: '#8b5cf6' },
@@ -11,9 +13,23 @@ const METODOS_PAGO = [
 export default function Resumen() {
   const { idMesa } = useParams()
   const navigate = useNavigate()
+  const { toast } = useToast()
 
   const [metodoPago, setMetodoPago] = useState('yape')
   const [propinaIdx, setPropinaIdx] = useState(1) // 0=0%, 1=5%, 2=10%
+  const [solicitando, setSolicitando] = useState(false)
+
+  const handlePedirCuenta = async () => {
+    setSolicitando(true)
+    try {
+      await pedirCuenta(idMesa)
+      toast('Solicitud de cuenta enviada al mozo.', 'success')
+    } catch (e) {
+      toast('Error al solicitar la cuenta', 'error')
+    } finally {
+      setSolicitando(false)
+    }
+  }
 
   const user = JSON.parse(localStorage.getItem('swifttable_user') || '{"nombre":"Carlos","isLider":true}')
   const isLider = user.isLider || false
@@ -36,6 +52,8 @@ export default function Resumen() {
   const propinaMonto = subtotal * pctPropina
   const totalFinal = subtotal + servicio + propinaMonto
 
+  const restName = localStorage.getItem('swifttable_nombre_restaurante') || 'SwiftTable'
+
   return (
     <>
       <div className="native-app-bar">
@@ -44,7 +62,7 @@ export default function Resumen() {
             <ChevronLeft size={28} color="var(--accent)" />
           </button>
         </div>
-        <div className="title">Pago</div>
+        <div className="title">{restName}</div>
         <div className="right-action"></div>
       </div>
 
@@ -112,9 +130,18 @@ export default function Resumen() {
         </div>
       </div>
 
-      <div className="native-bottom-bar">
+      <div className="native-bottom-bar" style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '16px' }}>
+        <button
+          className="wf-btn-outline"
+          style={{ width: '100%', padding: '16px', fontSize: '16px' }}
+          onClick={handlePedirCuenta}
+          disabled={solicitando}
+        >
+          {solicitando ? 'Enviando...' : 'Pedir Cuenta al Mozo'}
+        </button>
         <button
           className="wf-btn-solid"
+          style={{ width: '100%', padding: '16px', margin: 0, fontSize: '16px' }}
           onClick={() => alert(`Pagando S/ ${totalFinal.toFixed(2)}`)}
         >
           Pagar S/ {totalFinal.toFixed(2)}

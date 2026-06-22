@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from App.DataBase.connection import get_db
@@ -10,17 +11,24 @@ router = APIRouter(prefix="/api/pedidos", tags=["Pedidos"])
 
 @router.post("/", response_model=PedidoResponse)
 def crear_pedido(datos: PedidoCreate, db: Session = Depends(get_db)):
-    nuevo = Pedido(**datos.model_dump())
+    from App.Models.mesa import Mesa
+    mesa = db.query(Mesa).filter(Mesa.id_mesa == datos.id_mesa).first()
+    if not mesa:
+        raise HTTPException(status_code=404, detail="Mesa no encontrada")
+    nuevo = Pedido(**datos.model_dump(), id_restaurante=mesa.id_restaurante)
     db.add(nuevo)
     db.commit()
     db.refresh(nuevo)
     return nuevo
 
-@router.get("/", response_model=list[PedidoResponse])
-def listar_pedidos(db: Session = Depends(get_db)):
-    return db.query(Pedido).all()
+@router.get("/", response_model=List[PedidoResponse])
+def listar_pedidos(id_restaurante: int = None, db: Session = Depends(get_db)):
+    query = db.query(Pedido)
+    if id_restaurante is not None:
+        query = query.filter(Pedido.id_restaurante == id_restaurante)
+    return query.all()
 
-@router.get("/mesa/{id_mesa}", response_model=list[PedidoResponse])
+@router.get("/mesa/{id_mesa}", response_model=List[PedidoResponse])
 def pedidos_por_mesa(id_mesa: int, db: Session = Depends(get_db)):
     return db.query(Pedido).filter(Pedido.id_mesa == id_mesa).all()
 

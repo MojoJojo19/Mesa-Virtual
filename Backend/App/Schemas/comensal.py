@@ -1,14 +1,15 @@
+from typing import Optional
 from pydantic import BaseModel
 
 class ComensalCreate(BaseModel):
     nombre: str
-    avatar: str | None = None
+    avatar: Optional[str] = None
     id_mesa: int
 
 class ComensalResponse(BaseModel):
     id_comensal: int
     nombre: str
-    avatar: str | None = None
+    avatar: Optional[str] = None
     estado_sesion: str
     id_mesa: int
 

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from App.DataBase.connection import get_db
@@ -22,7 +23,9 @@ def crear_usuario(datos: UsuarioCreate, db: Session = Depends(get_db)):
     db.refresh(nuevo)
     return nuevo
 
-@router.get("/", response_model=list[UsuarioResponse])
+from typing import List
+
+@router.get("/", response_model=List[UsuarioResponse])
 def listar_usuarios(db: Session = Depends(get_db), usuario_actual: Usuario = Depends(obtener_usuario_actual)):
     return db.query(Usuario).all()
 

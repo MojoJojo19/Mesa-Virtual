@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from App.DataBase.connection import get_db
@@ -28,10 +29,10 @@ def crear_detalle(datos: DetallePedidoCreate, db: Session = Depends(get_db)):
     db.refresh(nuevo)
     return nuevo
 
-@router.get("/", response_model=list[DetallePedidoResponse])
+@router.get("/", response_model=List[DetallePedidoResponse])
 def listar_detalles(db: Session = Depends(get_db)):
     return db.query(DetallePedido).all()
 
-@router.get("/pedido/{id_pedido}", response_model=list[DetallePedidoResponse])
+@router.get("/pedido/{id_pedido}", response_model=List[DetallePedidoResponse])
 def detalles_por_pedido(id_pedido: int, db: Session = Depends(get_db)):
     return db.query(DetallePedido).filter(DetallePedido.id_pedido == id_pedido).all()
