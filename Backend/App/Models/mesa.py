@@ -24,5 +24,6 @@ class Mesa(Base):
     asistencias = relationship("Asistencia", back_populates="mesa", cascade="all, delete-orphan")
     pedidos = relationship("Pedido", back_populates="mesa")
 
+
     # NOTA: la relación Mesa -> Pedido se agrega en conjunto con Match (Bloque 2),
     # porque requiere que Pedido tenga su lado del back_populates ya definido.
