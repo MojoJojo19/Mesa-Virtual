@@ -49,15 +49,26 @@ export const MOCK_MESA = {
   capacidad: 4, pin: '7823', estado: 'activa'
 }
 
-// ─── Helper para evitar esperas largas si el backend no responde ───
+// ─── Helper para evitar esperas largas si el backend no responde y enviar Token JWT ───
 const fetchWithTimeout = async (url, options = {}) => {
-  const { timeout = 5000, ...rest } = options;
+  const { timeout = 1500, ...rest } = options;
+  
+  // BUENA PRÁCTICA API: Adjuntar Token JWT automáticamente a todas las peticiones
+  const token = localStorage.getItem('swifttable_token');
+  if (token) {
+    rest.headers = {
+      ...rest.headers,
+      'Authorization': `Bearer ${token}`
+    };
+  }
+
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
   const response = await fetch(url, { ...rest, signal: controller.signal });
   clearTimeout(id);
   return response;
 };
+
 
 // ─── API calls ───────────────────────────────────────────────────
 export const getPlatos = async (idRestaurante = null) => {
