@@ -20,6 +20,7 @@ class Comensal(Base):
 
     # --- Relaciones (Bloque 1) ---
     mesa = relationship("Mesa", back_populates="comensales")
+    pedidos = relationship("Pedido", back_populates="comensal")
 
     # NOTA: Comensal -> Pedido y Comensal -> Pago se agregan en conjunto con Match,
     # cuando él tenga el back_populates listo del lado de Pedido/Pago.
