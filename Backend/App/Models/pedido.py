@@ -26,3 +26,7 @@ class Pedido(Base):
     pago = relationship("Pago", back_populates="pedido", uselist=False)
     mesa = relationship("Mesa", back_populates="pedidos")
     comensal = relationship("Comensal", back_populates="pedidos")
+
+    # Relación cruzada Bloque 1 + Bloque 2: el mesero/usuario que tomó el pedido.
+    # Sin esta línea, el back_populates en Usuario.pedidos rompe el mapper al arrancar.
+    usuario = relationship("Usuario", back_populates="pedidos")
