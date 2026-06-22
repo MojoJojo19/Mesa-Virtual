@@ -46,6 +46,24 @@ export default function SelectorRol() {
     navigate(`/mesa/${mesaElegida}`)
   }
 
+  const handleEntrarComoClienteConToken = (e) => {
+    e.preventDefault()
+    if (!mesaElegida) {
+      toast('Por favor, selecciona una mesa', 'error')
+      return
+    }
+    const mesaObj = mesasDisponibles.find(m => m.id_mesa === parseInt(mesaElegida))
+    const token = mesaObj ? mesaObj.token_sesion : ''
+    
+    if (token) {
+      toast(`Simulando escaneo QR para Mesa ${mesaElegida}`, 'success')
+      navigate(`/mesa/${mesaElegida}?token=${token}`)
+    } else {
+      toast(`Mesa sin token activo. Accediendo normalmente.`, 'info')
+      navigate(`/mesa/${mesaElegida}`)
+    }
+  }
+
   const handleEntrarComoPersonal = (e) => {
     e.preventDefault()
     // El PIN de simulación será "4321" o "1234"
@@ -103,13 +121,16 @@ export default function SelectorRol() {
             {/* Opción Cliente (Informativa, exige QR) */}
             <div 
               className="card animate-pop" 
+              onClick={() => setRolSeleccionado('cliente')}
               style={{ 
                 padding: '24px', 
                 borderRadius: '20px', 
                 background: 'var(--surface)', 
                 border: '1.5px solid var(--border)',
+                cursor: 'pointer',
                 textAlign: 'center',
-                boxShadow: 'var(--shadow-sm)'
+                boxShadow: 'var(--shadow-sm)',
+                transition: 'all 0.2s'
               }}
             >
               <div style={{ 
@@ -160,7 +181,7 @@ export default function SelectorRol() {
             </div>
 
           </div>
-        ) : (
+        ) : rolSeleccionado === 'staff' ? (
           /* Formulario Staff / Ingreso de PIN */
           <form onSubmit={handleEntrarComoPersonal} className="card animate-pop" style={{ padding: '24px', borderRadius: '20px', background: 'var(--surface)', border: '1.5px solid var(--border)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -218,6 +239,92 @@ export default function SelectorRol() {
             >
               Ingresar a Logística
             </button>
+          </form>
+        ) : (
+          /* Formulario Cliente / Selección de Mesa */
+          <form onSubmit={handleEntrarComoCliente} className="card animate-pop" style={{ padding: '24px', borderRadius: '20px', background: 'var(--surface)', border: '1.5px solid var(--border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--accent)', textTransform: 'uppercase' }}>
+                Acceso Cliente (Simulador)
+              </span>
+              <button 
+                type="button" 
+                onClick={() => { setRolSeleccionado(null); setMesaElegida(''); }}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-3)' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <h3 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-1)', marginBottom: '12px' }}>
+              Selecciona una Mesa
+            </h3>
+            <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '20px', lineHeight: '1.4' }}>
+              Elige la mesa a la que deseas acceder para simular la experiencia del comensal.
+            </p>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: '700', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+                Mesa
+              </label>
+              <select
+                value={mesaElegida}
+                onChange={(e) => setMesaElegida(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  borderRadius: '12px',
+                  background: 'var(--bg)',
+                  border: '1.5px solid var(--border)',
+                  color: 'var(--text-1)',
+                  fontSize: '15px',
+                  fontWeight: '600',
+                  outline: 'none',
+                  fontFamily: 'inherit',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="">-- Seleccionar Mesa --</option>
+                {mesasDisponibles.map(m => (
+                  <option key={m.id_mesa} value={m.id_mesa}>
+                    Mesa {m.numero}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <button 
+                type="submit" 
+                className="wf-btn-solid"
+                style={{ width: '100%', padding: '14px', fontSize: '15px', borderRadius: '12px', margin: 0, background: 'var(--accent)', boxShadow: 'none' }}
+              >
+                Acceder a la Mesa (Con PIN)
+              </button>
+
+              <button 
+                type="button" 
+                onClick={handleEntrarComoClienteConToken}
+                className="wf-btn-outline"
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  fontSize: '15px',
+                  borderRadius: '12px',
+                  margin: 0,
+                  border: '1px solid var(--border-2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  boxShadow: 'none',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                <QrCode size={16} /> Simular Escaneo QR (Sin PIN)
+              </button>
+            </div>
           </form>
         )}
 

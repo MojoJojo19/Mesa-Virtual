@@ -6,7 +6,7 @@ const getApiUrl = () => {
   }
   return 'http://127.0.0.1:8000/api';
 };
-const API_URL = getApiUrl();
+export const API_URL = getApiUrl();
 
 // ─── Datos mock de fallback (cuando el backend no está activo) ───
 export const MOCK_PLATOS = [
@@ -123,6 +123,19 @@ export const validarPin = async (idMesa, pin) => {
     const mockMesas = getMockMesasLocales()
     const mesa = mockMesas.find(m => m.id_mesa === parseInt(idMesa))
     return mesa ? mesa.pin === pin : false
+  }
+}
+
+export const validarToken = async (idMesa, token) => {
+  try {
+    const res = await fetchWithTimeout(`${API_URL}/mesas/${idMesa}/validar-token?token=${token}`)
+    if (!res.ok) throw new Error('Error')
+    const data = await res.json()
+    return data.valido
+  } catch {
+    const mockMesas = getMockMesasLocales()
+    const mesa = mockMesas.find(m => m.id_mesa === parseInt(idMesa))
+    return mesa ? mesa.token_sesion === token : false;
   }
 }
 
@@ -292,13 +305,13 @@ const getMockMesasLocales = () => {
     const val = localStorage.getItem('swifttable_mock_mesas');
     if (!val) {
       const iniciales = [
-        { id_mesa: 1, numero: 1, estado: 'libre', pin: '1234', comensales: [] },
-        { id_mesa: 2, numero: 2, estado: 'libre', pin: '5678', comensales: [] },
-        { id_mesa: 3, numero: 3, estado: 'ocupada', pin: '4321', comensales: [{ nombre: 'Juan', avatar: '🐱' }, { nombre: 'María', avatar: '🦊' }] },
-        { id_mesa: 4, numero: 4, estado: 'libre', pin: '8765', comensales: [] },
-        { id_mesa: 5, numero: 5, estado: 'ocupada', pin: '2468', comensales: [{ nombre: 'Pedro', avatar: '🐶' }] },
-        { id_mesa: 6, numero: 6, estado: 'libre', pin: '1357', comensales: [] },
-        { id_mesa: 7, numero: 7, estado: 'ocupada', pin: '7823', comensales: [{ nombre: 'Carlos', avatar: '🐱', isLider: true }, { nombre: 'Ana', avatar: '🐶' }] }
+        { id_mesa: 1, numero: 1, estado: 'libre', pin: '1234', token_sesion: 'token1', comensales: [] },
+        { id_mesa: 2, numero: 2, estado: 'libre', pin: '5678', token_sesion: 'token2', comensales: [] },
+        { id_mesa: 3, numero: 3, estado: 'ocupada', pin: '4321', token_sesion: 'token3', comensales: [{ nombre: 'Juan', avatar: '🐱' }, { nombre: 'María', avatar: '🦊' }] },
+        { id_mesa: 4, numero: 4, estado: 'libre', pin: '8765', token_sesion: 'token4', comensales: [] },
+        { id_mesa: 5, numero: 5, estado: 'ocupada', pin: '2468', token_sesion: 'token5', comensales: [{ nombre: 'Pedro', avatar: '🐶' }] },
+        { id_mesa: 6, numero: 6, estado: 'libre', pin: '1357', token_sesion: 'token6', comensales: [] },
+        { id_mesa: 7, numero: 7, estado: 'ocupada', pin: '7823', token_sesion: 'token7', comensales: [{ nombre: 'Carlos', avatar: '🐱', isLider: true }, { nombre: 'Ana', avatar: '🐶' }] }
       ];
       localStorage.setItem('swifttable_mock_mesas', JSON.stringify(iniciales));
       return iniciales;
@@ -309,9 +322,10 @@ const getMockMesasLocales = () => {
   }
 };
 
-export const getMesas = async () => {
+export const getMesas = async (idRestaurante = null) => {
   try {
-    const res = await fetchWithTimeout(`${API_URL}/mesas/`);
+    const url = idRestaurante ? `${API_URL}/mesas/?id_restaurante=${idRestaurante}` : `${API_URL}/mesas/`
+    const res = await fetchWithTimeout(url);
     if (!res.ok) throw new Error('Error');
     const data = await res.json();
     // Ordenar mesas por número ascendente
@@ -374,6 +388,7 @@ export const liberarMesa = async (idMesa) => {
             ...m, 
             estado: 'libre', 
             pin: Math.floor(1000 + Math.random() * 9000).toString(), 
+            token_sesion: Math.random().toString(36).substring(2, 10),
             comensales: [] 
           };
         }

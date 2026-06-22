@@ -18,6 +18,7 @@ class MesaResponse(BaseModel):
     numero: int
     estado: str
     codigo_qr: Optional[str] = None
+    token_sesion: Optional[str] = None
     restaurante: Optional[RestauranteMini] = None
     comensales: Optional[List[ComensalResponse]] = None
 

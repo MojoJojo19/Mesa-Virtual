@@ -18,6 +18,7 @@ export default function Lobby() {
   ])
   const [pinMesa, setPinMesa] = useState('----')
   const [numeroMesa, setNumeroMesa] = useState(localStorage.getItem('swifttable_numero_mesa') || idMesa)
+  const [tokenSesion, setTokenSesion] = useState('')
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -46,6 +47,7 @@ export default function Lobby() {
           }
           setPinMesa(mesaInfo.pin || '----')
           setNumeroMesa(mesaInfo.numero || idMesa)
+          setTokenSesion(mesaInfo.token_sesion || '')
         }
 
         const dbComensales = await getComensalesDeMesa(idMesa)
@@ -68,8 +70,11 @@ export default function Lobby() {
   }, [idMesa, navigate, toast])
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(`swifttable.com/mesa/${idMesa}`)
-    toast('Enlace copiado al portapapeles', 'success')
+    const url = tokenSesion 
+      ? `${window.location.origin}/mesa/${idMesa}?token=${tokenSesion}` 
+      : `${window.location.origin}/mesa/${idMesa}`;
+    navigator.clipboard.writeText(url)
+    toast('Enlace de invitación copiado', 'success')
   }
 
   const restName = localStorage.getItem('swifttable_nombre_restaurante') || 'SwiftTable'

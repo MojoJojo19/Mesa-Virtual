@@ -1,10 +1,67 @@
-import React from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import React, { useEffect, useState } from 'react'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { QrCode, Flame } from 'lucide-react'
+import { validarToken } from '../services/api'
+import { useToast } from '../components/Toast'
 
 export default function Bienvenida() {
   const { idMesa } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const { toast } = useToast()
+  const [verificando, setVerificando] = useState(false)
+
+  useEffect(() => {
+    const verificarAccesoToken = async () => {
+      const queryParams = new URLSearchParams(location.search)
+      const token = queryParams.get('token')
+      
+      if (token) {
+        setVerificando(true)
+        try {
+          const esValido = await validarToken(idMesa, token)
+          if (esValido) {
+            toast('Enlace verificado por código QR', 'success')
+            localStorage.setItem(`swifttable_token_sesion_${idMesa}`, token)
+            setTimeout(() => {
+              navigate(`/mesa/${idMesa}/ingreso`)
+            }, 800)
+            return
+          } else {
+            toast('El código QR ha expirado. Por favor ingresa usando el PIN actual.', 'error')
+          }
+        } catch (e) {
+          console.error("Error al validar token de sesión:", e)
+        } finally {
+          setVerificando(false)
+        }
+      }
+    }
+    verificarAccesoToken()
+  }, [idMesa, location.search, navigate, toast])
+
+  if (verificando) {
+    return (
+      <div className="content-wrapper flex-col" style={{ justifyContent: 'center', alignItems: 'center', height: '90vh', gap: '16px' }}>
+        <div style={{
+          width: '40px', height: '40px',
+          border: '4px solid var(--border)',
+          borderTop: '4px solid var(--accent)',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite'
+        }}></div>
+        <p style={{ fontWeight: '700', color: 'var(--text-2)', fontSize: '15px' }}>
+          Verificando enlace de mesa...
+        </p>
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    )
+  }
 
   return (
     <>

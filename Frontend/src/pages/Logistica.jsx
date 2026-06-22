@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, FileText, ChevronLeft, RefreshCw, CheckCircle, Clock, Plus, Volume2, VolumeX, X, User, Utensils, LayoutGrid, ChefHat, ConciergeBell, Receipt, DollarSign } from 'lucide-react'
-import { getAsistencias, atenderAsistencia, simularLlamadoDesdePanel, getMesas, liberarMesa, getPedidosDeMesa, registrarPago, actualizarEstadoPedido, getPagos, getPedidosTodos } from '../services/api'
+import { Bell, FileText, ChevronLeft, RefreshCw, CheckCircle, Clock, Plus, Volume2, VolumeX, X, User, Utensils, LayoutGrid, ChefHat, ConciergeBell, Receipt, DollarSign, QrCode } from 'lucide-react'
+import { getAsistencias, atenderAsistencia, simularLlamadoDesdePanel, getMesas, liberarMesa, getPedidosDeMesa, registrarPago, actualizarEstadoPedido, getPagos, getPedidosTodos, API_URL } from '../services/api'
 import { useToast } from '../components/Toast'
 
 export default function Logistica() {
@@ -223,6 +223,98 @@ export default function Logistica() {
     } catch (e) {
       toast('Error al registrar pago en Caja', 'error')
     }
+  }
+
+  const handlePrintQR = (mesa) => {
+    const printWindow = window.open('', '_blank')
+    const qrUrl = `${API_URL}/mesas/${mesa.id_mesa}/qr_imagen?host=${window.location.origin}`
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Imprimir QR - Mesa ${mesa.numero}</title>
+          <style>
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              text-align: center;
+              margin: 0;
+              padding: 40px;
+              color: #0f172a;
+              background-color: #fff;
+            }
+            .card {
+              border: 3px solid #0f172a;
+              border-radius: 24px;
+              padding: 40px;
+              max-width: 320px;
+              margin: 0 auto;
+              box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            }
+            h1 {
+              font-size: 28px;
+              margin: 0 0 5px 0;
+              font-weight: 800;
+              letter-spacing: -0.02em;
+            }
+            h2 {
+              font-size: 20px;
+              color: #64748b;
+              margin-top: 0;
+              margin-bottom: 24px;
+              font-weight: 600;
+            }
+            .qr-img {
+              width: 220px;
+              height: 220px;
+              margin: 10px auto;
+              display: block;
+            }
+            .instructions {
+              font-size: 14px;
+              color: #475569;
+              margin-top: 24px;
+              line-height: 1.5;
+              font-weight: 600;
+            }
+            .pin {
+              display: inline-block;
+              background: #f1f5f9;
+              padding: 6px 16px;
+              border-radius: 12px;
+              font-size: 20px;
+              font-weight: 800;
+              margin-top: 10px;
+              color: #0f172a;
+              border: 1px solid #cbd5e1;
+              letter-spacing: 2px;
+            }
+            @media print {
+              body { padding: 0; background-color: #fff; }
+              .card { box-shadow: none; border: 3px solid #000; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <h1>LA FOGATA</h1>
+            <h2>MESA ${mesa.numero}</h2>
+            <img class="qr-img" src="${qrUrl}" alt="Código QR" />
+            <div class="instructions">
+              Escanea el código QR para realizar tu pedido desde tu celular.<br/>
+              O ingresa con el PIN en la pantalla de la mesa:
+              <br/>
+              <div class="pin">${mesa.pin || '----'}</div>
+            </div>
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
   }
 
   // Simulación
@@ -820,13 +912,57 @@ export default function Logistica() {
                 <h3 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '4px', color: 'var(--text-1)' }}>
                   Detalles: Mesa {mesaSeleccionada.numero}
                 </h3>
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-                  <span className={`category-tab active`} style={{ fontSize: '11px', padding: '4px 10px', background: mesaSeleccionada.estado === 'ocupada' ? 'var(--accent)' : 'var(--green)' }}>
-                    {mesaSeleccionada.estado === 'ocupada' ? 'Sesión Ocupada' : 'Mesa Vacía / Libre'}
-                  </span>
-                  <span className="category-tab" style={{ fontSize: '11px', padding: '4px 10px', background: 'var(--surface-2)', color: 'var(--text-1)', boxShadow: 'none' }}>
-                    PIN: <strong>{mesaSeleccionada.pin || 'Sin PIN'}</strong>
-                  </span>
+                <div style={{ display: 'flex', gap: '16px', marginBottom: '20px', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                      <span className={`category-tab active`} style={{ fontSize: '11px', padding: '4px 10px', background: mesaSeleccionada.estado === 'ocupada' ? 'var(--accent)' : 'var(--green)' }}>
+                        {mesaSeleccionada.estado === 'ocupada' ? 'Sesión Ocupada' : 'Mesa Vacía / Libre'}
+                      </span>
+                      <span className="category-tab" style={{ fontSize: '11px', padding: '4px 10px', background: 'var(--surface-2)', color: 'var(--text-1)', boxShadow: 'none' }}>
+                        PIN: <strong>{mesaSeleccionada.pin || 'Sin PIN'}</strong>
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handlePrintQR(mesaSeleccionada)}
+                      className="wf-btn-outline"
+                      style={{
+                        padding: '10px 14px',
+                        fontSize: '13px',
+                        fontWeight: '700',
+                        borderRadius: '8px',
+                        width: '100%',
+                        margin: 0,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        border: '1px solid var(--border-2)',
+                        boxShadow: 'none'
+                      }}
+                    >
+                      <QrCode size={16} /> Imprimir QR de Mesa
+                    </button>
+                  </div>
+                  <div style={{
+                    background: '#fff',
+                    padding: '8px',
+                    borderRadius: '12px',
+                    border: '1px solid var(--border)',
+                    boxShadow: 'var(--shadow-sm)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    flexShrink: 0
+                  }}>
+                    <img 
+                      src={`${API_URL}/mesas/${mesaSeleccionada.id_mesa}/qr_imagen?host=${window.location.origin}`}
+                      alt={`QR Mesa ${mesaSeleccionada.numero}`}
+                      style={{ width: '80px', height: '80px', display: 'block', borderRadius: '4px' }}
+                      key={mesaSeleccionada.token_sesion || 'no-token'}
+                    />
+                    <span style={{ fontSize: '9px', fontWeight: 'bold', color: '#64748b', marginTop: '4px' }}>QR ACTIVO</span>
+                  </div>
                 </div>
 
                 {/* Comensales conectados */}

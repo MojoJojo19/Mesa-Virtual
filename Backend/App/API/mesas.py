@@ -1,3 +1,7 @@
+import uuid
+import qrcode
+from io import BytesIO
+from fastapi.responses import StreamingResponse
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -26,6 +30,7 @@ def crear_mesa(datos: MesaCreate, id_restaurante: int, db: Session = Depends(get
     # 2. Ahora que tenemos el ID (ej. Mesa #1), generamos su QR y su PIN de acceso
     nuevo.codigo_qr = generar_qr_mesa(nuevo.id_mesa)
     nuevo.pin = generar_pin()
+    nuevo.token_sesion = uuid.uuid4().hex[:8]
     db.commit()
     db.refresh(nuevo)
 
@@ -67,6 +72,43 @@ def validar_pin(id_mesa: int, datos: ValidarPinRequest, db: Session = Depends(ge
     return {"valido": mesa.pin == datos.pin}
 
 
+@router.get("/{id_mesa}/validar-token")
+def validar_token(id_mesa: int, token: str, db: Session = Depends(get_db)):
+    mesa = db.query(Mesa).filter(Mesa.id_mesa == id_mesa).first()
+    if not mesa:
+        raise HTTPException(status_code=404, detail="Mesa no encontrada")
+    return {"valido": mesa.token_sesion == token}
+
+
+@router.get("/{id_mesa}/qr_imagen")
+def obtener_qr_imagen(id_mesa: int, host: str = "http://localhost:5173", db: Session = Depends(get_db)):
+    mesa = db.query(Mesa).filter(Mesa.id_mesa == id_mesa).first()
+    if not mesa:
+        raise HTTPException(status_code=404, detail="Mesa no encontrada")
+    
+    if not mesa.token_sesion:
+        mesa.token_sesion = uuid.uuid4().hex[:8]
+        db.commit()
+        db.refresh(mesa)
+    
+    url_mesa = f"{host}/mesa/{mesa.id_mesa}?token={mesa.token_sesion}"
+    
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(url_mesa)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return StreamingResponse(buf, media_type="image/png")
+
+
 @router.get("/{id_mesa}/comensales", response_model=List[ComensalResponse])
 def listar_comensales_de_mesa(id_mesa: int, db: Session = Depends(get_db)):
     """
@@ -89,6 +131,8 @@ def liberar_mesa(id_mesa: int, db: Session = Depends(get_db)):
     mesa.estado = EstadoMesa.libre
     # 2. Generar un nuevo PIN aleatorio
     mesa.pin = generar_pin()
+    # Generar un nuevo token de sesión
+    mesa.token_sesion = uuid.uuid4().hex[:8]
     # 3. Eliminar los comensales asociados a esta mesa (limpiar la sesión)
     mesa.comensales.clear()
     
