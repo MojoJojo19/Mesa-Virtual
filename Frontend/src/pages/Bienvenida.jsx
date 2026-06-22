@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
-import { QrCode, Flame } from 'lucide-react'
-import { validarToken } from '../services/api'
+import { Flame } from 'lucide-react'
+import { validarToken, getMesa, API_URL } from '../services/api'
 import { useToast } from '../components/Toast'
 
 export default function Bienvenida() {
@@ -10,6 +10,26 @@ export default function Bienvenida() {
   const location = useLocation()
   const { toast } = useToast()
   const [verificando, setVerificando] = useState(false)
+  const [tokenSesion, setTokenSesion] = useState('')
+  const [numeroMesa, setNumeroMesa] = useState(idMesa)
+  const [pinMesa, setPinMesa] = useState('----')
+  const [qrError, setQrError] = useState(false)
+
+  useEffect(() => {
+    const cargarMesa = async () => {
+      try {
+        const mesa = await getMesa(idMesa)
+        if (mesa) {
+          setTokenSesion(mesa.token_sesion || '')
+          setNumeroMesa(mesa.numero || idMesa)
+          setPinMesa(mesa.pin || '----')
+        }
+      } catch (e) {
+        console.error('Error cargando mesa:', e)
+      }
+    }
+    cargarMesa()
+  }, [idMesa])
 
   useEffect(() => {
     const verificarAccesoToken = async () => {
@@ -65,7 +85,6 @@ export default function Bienvenida() {
 
   return (
     <>
-      {/* AppBar Transparente para un look más inmersivo */}
       <div className="native-app-bar" style={{ background: 'transparent', border: 'none', backdropFilter: 'none' }}>
         <div className="left-action"></div>
         <div className="title" style={{ color: 'var(--text-1)' }}></div>
@@ -74,7 +93,6 @@ export default function Bienvenida() {
 
       <div className="content-wrapper flex-col" style={{ padding: '0 24px 24px', marginTop: '-40px' }}>
         
-        {/* Hero Section */}
         <div style={{ textAlign: 'center', marginBottom: '40px', marginTop: '16px' }}>
           <div style={{ 
             width: '80px', height: '80px', borderRadius: '24px', 
@@ -93,7 +111,6 @@ export default function Bienvenida() {
           </p>
         </div>
 
-        {/* Scanner Card Premium */}
         <div 
           className="card animate-fade-in" 
           style={{ 
@@ -108,35 +125,61 @@ export default function Bienvenida() {
             overflow: 'hidden'
           }}
         >
-          {/* Decorative glowing orb */}
           <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', width: '150px', height: '150px', background: 'var(--accent)', filter: 'blur(80px)', opacity: 0.15, borderRadius: '50%' }} />
           
-          <div className="section-label" style={{ color: 'var(--accent)', fontWeight: '800' }}>Empezar a pedir</div>
+          <div className="section-label" style={{ color: 'var(--accent)', fontWeight: '800' }}>Escanea para entrar</div>
           <p style={{ fontSize: '15px', color: 'var(--text-2)', marginBottom: '24px', lineHeight: 1.5 }}>
-            Ingresa a la mesa utilizando el PIN de seguridad impreso en el acrílico físico de tu mesa.
+            Apunta la cámara de tu celular al código QR o ingresa con el PIN de la mesa.
           </p>
-          
-          <div style={{ position: 'relative', width: '140px', height: '140px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '30px', height: '30px', borderTop: '3px solid var(--accent)', borderLeft: '3px solid var(--accent)', borderRadius: '8px 0 0 0' }} />
-            <div style={{ position: 'absolute', top: 0, right: 0, width: '30px', height: '30px', borderTop: '3px solid var(--accent)', borderRight: '3px solid var(--accent)', borderRadius: '0 8px 0 0' }} />
-            <div style={{ position: 'absolute', bottom: 0, left: 0, width: '30px', height: '30px', borderBottom: '3px solid var(--accent)', borderLeft: '3px solid var(--accent)', borderRadius: '0 0 0 8px' }} />
-            <div style={{ position: 'absolute', bottom: 0, right: 0, width: '30px', height: '30px', borderBottom: '3px solid var(--accent)', borderRight: '3px solid var(--accent)', borderRadius: '0 0 8px 0' }} />
-            
-            <QrCode size={64} color="var(--text-1)" strokeWidth={1} style={{ opacity: 0.8 }} />
-            
-            <div style={{ position: 'absolute', top: '10%', left: '10%', right: '10%', height: '2px', background: 'var(--accent)', boxShadow: '0 0 8px var(--accent)', animation: 'scan 2.5s ease-in-out infinite' }} />
+
+          <div style={{
+            background: '#fff',
+            padding: '12px',
+            borderRadius: '16px',
+            display: 'inline-block',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+            border: '1px solid var(--border)',
+            marginBottom: '12px'
+          }}>
+            {tokenSesion && !qrError ? (
+              <img
+                src={`${API_URL}/mesas/${idMesa}/qr_imagen?host=${window.location.origin}`}
+                alt={`QR Mesa ${numeroMesa}`}
+                style={{ width: '160px', height: '160px', display: 'block', borderRadius: '8px' }}
+                onError={() => setQrError(true)}
+                key={tokenSesion}
+              />
+            ) : (
+              <div style={{
+                width: '160px', height: '160px',
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center',
+                gap: '8px', color: 'var(--text-3)'
+              }}>
+                <div style={{
+                  width: '32px', height: '32px',
+                  border: '3px solid var(--border)',
+                  borderTop: '3px solid var(--accent)',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }} />
+                <span style={{ fontSize: '12px' }}>Cargando QR...</span>
+              </div>
+            )}
           </div>
-          
+
+          <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-2)', letterSpacing: '0.05em' }}>
+            MESA {numeroMesa} • PIN: {pinMesa}
+          </div>
+
           <style>{`
-            @keyframes scan {
-              0%, 100% { transform: translateY(0); opacity: 0; }
-              10%, 90% { opacity: 1; }
-              50% { transform: translateY(112px); }
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
             }
           `}</style>
         </div>
 
-        {/* Botón de Acceso Principal */}
         <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <button 
             className="wf-btn-solid" 
