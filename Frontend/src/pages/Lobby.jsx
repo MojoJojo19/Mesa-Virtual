@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Users, Copy, Share } from 'lucide-react'
+import { Users, Copy, Share, QrCode } from 'lucide-react'
 import { useToast } from '../components/Toast'
-import { getComensalesDeMesa, getMesa } from '../services/api'
+import { getComensalesDeMesa, getMesa, API_URL } from '../services/api'
 
 export default function Lobby() {
   const { idMesa } = useParams()
@@ -118,6 +118,52 @@ export default function Lobby() {
             Eres el líder. Decide cuándo empezar el pedido por todos.
           </p>
         )}
+
+        {/* Código QR de Invitación en la Mesa (Para que otros comensales se unan escaneando la pantalla de la tableta) */}
+        <div 
+          className="card animate-pop" 
+          style={{ 
+            padding: '20px', 
+            borderRadius: '20px',
+            border: '2px dashed var(--accent-border)',
+            background: 'var(--accent-bg)',
+            textAlign: 'center',
+            marginTop: '20px',
+            boxShadow: 'var(--shadow-sm)'
+          }}
+        >
+          <p style={{ fontSize: '13px', fontWeight: '800', color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+            <QrCode size={16} /> ¿Pedir desde tu propio celular?
+          </p>
+          <p style={{ fontSize: '12px', color: 'var(--text-2)', marginBottom: '16px', lineHeight: 1.4 }}>
+            Escanea este código desde tu celular para unirte a esta mesa y realizar pedidos en simultáneo.
+          </p>
+          
+          <div style={{
+            background: '#fff',
+            padding: '12px',
+            borderRadius: '16px',
+            display: 'inline-block',
+            boxShadow: 'var(--shadow-sm)',
+            border: '1px solid var(--border)'
+          }}>
+            {tokenSesion ? (
+              <img 
+                src={`${API_URL}/mesas/${idMesa}/qr_imagen?host=${window.location.origin}`}
+                alt={`Invitación Mesa ${numeroMesa}`}
+                style={{ width: '130px', height: '130px', display: 'block', borderRadius: '8px' }}
+                key={tokenSesion}
+              />
+            ) : (
+              <div style={{ width: '130px', height: '130px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}>
+                Cargando QR...
+              </div>
+            )}
+          </div>
+          <div style={{ marginTop: '8px', fontSize: '11px', fontWeight: 'bold', color: 'var(--text-2)' }}>
+            MESA: {numeroMesa} • PIN: {pinMesa}
+          </div>
+        </div>
       </div>
 
       <div className="native-bottom-bar">

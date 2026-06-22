@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Search, ShoppingBag, Bell } from 'lucide-react'
-import { getPlatos, getCategorias, llamarMesero, getMesa } from '../services/api'
+import { Search, ShoppingBag, Bell, QrCode } from 'lucide-react'
+import { getPlatos, getCategorias, llamarMesero, getMesa, API_URL } from '../services/api'
 import { useToast } from '../components/Toast'
 
 export default function Menu() {
@@ -11,6 +11,9 @@ export default function Menu() {
 
   const [carrito, setCarrito] = useState([])
   const [showBellMenu, setShowBellMenu] = useState(false)
+  const [showQRModal, setShowQRModal] = useState(false)
+  const [tokenSesion, setTokenSesion] = useState('')
+  const [numeroMesa, setNumeroMesa] = useState(idMesa)
 
   const handleLlamarMozo = () => {
     setShowBellMenu(true)
@@ -36,8 +39,10 @@ export default function Menu() {
         let restId = null
         try {
           const mesaInfo = await getMesa(idMesa)
-          if (mesaInfo && mesaInfo.id_restaurante) {
+          if (mesaInfo) {
             restId = mesaInfo.id_restaurante
+            setTokenSesion(mesaInfo.token_sesion || '')
+            setNumeroMesa(mesaInfo.numero || idMesa)
           }
         } catch (err) {
           console.error("Error al obtener la mesa:", err)
@@ -133,7 +138,15 @@ export default function Menu() {
           </button>
         </div>
         <div className="title" style={{ fontSize: '20px', fontWeight: '800', letterSpacing: '-0.02em' }}>{localStorage.getItem('swifttable_nombre_restaurante') || 'Menú'}</div>
-        <div className="right-action" style={{ gap: '8px', width: 'auto', minWidth: '40px' }}>
+        <div className="right-action" style={{ gap: '12px', width: 'auto', minWidth: '40px' }}>
+          <button 
+            className="wf-btn-ghost" 
+            style={{ padding: 0, color: 'var(--accent)', display: 'flex', alignItems: 'center' }} 
+            onClick={() => setShowQRModal(true)}
+            title="Conectar celulares (QR)"
+          >
+            <QrCode size={22} />
+          </button>
           <button 
             className="wf-btn-ghost" 
             style={{ padding: 0, color: 'var(--accent)', display: 'flex', alignItems: 'center' }} 
@@ -261,6 +274,54 @@ export default function Menu() {
               onClick={() => setShowBellMenu(false)}
             >
               Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showQRModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999, padding: '24px'
+        }}>
+          <div className="card animate-pop" style={{ maxWidth: '340px', width: '100%', padding: '24px', margin: 0, boxShadow: 'var(--shadow-md)', border: '1px solid var(--border)', textAlign: 'center' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-1)' }}>
+              Conectar Celular
+            </h3>
+            <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '16px', lineHeight: '1.4' }}>
+              Escanea este código QR desde tu celular para unirte a la **Mesa {numeroMesa}** y pedir en grupo.
+            </p>
+            
+            <div style={{
+              background: '#fff',
+              padding: '12px',
+              borderRadius: '16px',
+              display: 'inline-block',
+              boxShadow: 'var(--shadow-sm)',
+              border: '1px solid var(--border)',
+              marginBottom: '16px'
+            }}>
+              {tokenSesion ? (
+                <img 
+                  src={`${API_URL}/mesas/${idMesa}/qr_imagen?host=${window.location.origin}`}
+                  alt="Invitación QR"
+                  style={{ width: '150px', height: '150px', display: 'block', borderRadius: '8px' }}
+                />
+              ) : (
+                <div style={{ width: '150px', height: '150px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}>
+                  Cargando QR...
+                </div>
+              )}
+            </div>
+
+            <button 
+              className="wf-btn-solid" 
+              style={{ width: '100%', padding: '12px', fontSize: '14px', borderRadius: '12px', margin: 0, background: 'var(--dark-action)', boxShadow: 'none' }}
+              onClick={() => setShowQRModal(false)}
+            >
+              Entendido
             </button>
           </div>
         </div>
