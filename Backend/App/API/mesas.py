@@ -105,7 +105,7 @@ def obtener_qr_imagen(id_mesa: int, host: str = "http://localhost:5173", db: Ses
     img = qr.make_image(fill_color="black", back_color="white")
     
     buf = BytesIO()
-    img.save(buf, format="PNG")
+    img.save(buf, kind="PNG")
     buf.seek(0)
     return StreamingResponse(buf, media_type="image/png")
 
