@@ -46,12 +46,12 @@ export const MOCK_PLATOS = [
 
 export const MOCK_MESA = {
   id_mesa: 7, nombre_restaurante: 'La Fogata Grill',
-  capacidad: 4, pin: '7823', estado: 'activa'
+  capacidad: 4, pin: '7823', estado: 'activa', token_sesion: 'mock_token'
 }
 
 // ─── Helper para evitar esperas largas si el backend no responde y enviar Token JWT ───
 const fetchWithTimeout = async (url, options = {}) => {
-  const { timeout = 1500, ...rest } = options;
+  const { timeout = 10000, ...rest } = options;
   
   // BUENA PRÁCTICA API: Adjuntar Token JWT automáticamente a todas las peticiones
   const token = localStorage.getItem('swifttable_token');
@@ -101,7 +101,7 @@ export const getCategorias = async (idRestaurante = null) => {
 
 export const getMesa = async (idMesa) => {
   try {
-    const res = await fetchWithTimeout(`${API_URL}/mesas/${idMesa}/`)
+    const res = await fetchWithTimeout(`${API_URL}/mesas/${idMesa}`)
     if (!res.ok) throw new Error('Error')
     return await res.json()
   } catch {
