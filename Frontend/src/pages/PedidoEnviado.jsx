@@ -274,7 +274,20 @@ export default function PedidoEnviado() {
             </div>
           </div>
 
-          <div className="pago-option" onClick={() => navigate(`/mesa/${idMesa}/resumen`)} style={{ cursor: 'pointer' }}>
+          <div 
+            className="pago-option" 
+            onClick={() => {
+              const allServidos = pedidos.length > 0 && pedidos.every(p => p.estado === 'servido');
+              if (!allServidos && pedidos.length > 0) {
+                if (window.confirm("Tu pedido aún está en preparación en cocina. ¿Deseas proceder a pagar la cuenta de todos modos?")) {
+                  navigate(`/mesa/${idMesa}/resumen`);
+                }
+              } else {
+                navigate(`/mesa/${idMesa}/resumen`);
+              }
+            }} 
+            style={{ cursor: 'pointer' }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--purple-bg)', color: 'var(--purple)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <FileText size={20} />

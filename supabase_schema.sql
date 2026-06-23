@@ -64,6 +64,9 @@ CREATE TABLE mesas (
     estado estadomesa DEFAULT 'libre',
     codigo_qr VARCHAR(255) UNIQUE,
     pin VARCHAR(4),
+    token_sesion VARCHAR(36) UNIQUE,
+    tipo_pago VARCHAR(20) DEFAULT 'no_decidido',
+    tiempo_espera_adicional INTEGER DEFAULT 0,
     UNIQUE (numero, id_restaurante) -- Permite que cada restaurante tenga su propia 'Mesa 1001'
 );
 CREATE INDEX ix_mesas_id_restaurante ON mesas(id_restaurante);
@@ -99,7 +102,10 @@ CREATE TABLE comensales (
     nombre VARCHAR(100) NOT NULL,
     avatar VARCHAR(255),
     estado_sesion estadosesion DEFAULT 'activa',
-    id_mesa INTEGER NOT NULL REFERENCES mesas(id_mesa) ON DELETE CASCADE
+    id_mesa INTEGER NOT NULL REFERENCES mesas(id_mesa) ON DELETE CASCADE,
+    is_lider BOOLEAN DEFAULT FALSE,
+    estado_pedido VARCHAR(20) DEFAULT 'eligiendo',
+    carrito JSON DEFAULT '[]'::json
 );
 CREATE INDEX ix_comensales_id_restaurante ON comensales(id_restaurante);
 CREATE INDEX ix_comensales_id_mesa ON comensales(id_mesa);
@@ -173,22 +179,41 @@ INSERT INTO categorias (id_restaurante, nombre, descripcion) VALUES
 (2, 'Pizzas', 'Pizzas artesanales al horno de leña'),
 (2, 'Bebidas', 'Vinos y bebidas italianas');
 
+-- Categorías Adicionales
+INSERT INTO categorias (id_restaurante, nombre, descripcion) VALUES
+(1, 'Entradas y Guarniciones', 'Acompañamientos y entradas criollas'),
+(1, 'Postres', 'Postres peruanos tradicionales'),
+(2, 'Entradas', 'Entradas italianas tradicionales'),
+(2, 'Postres', 'Postres italianos artesanales');
+
+
 
 -- 4.3. Sembrar Mesas
--- Mesas para Restaurante 1 (La Fogata - Mesas 1001 al 1005)
+-- Mesas para Restaurante 1 (La Fogata - Mesas 1001 al 1010)
 INSERT INTO mesas (id_restaurante, numero, estado, pin) VALUES 
 (1, 1001, 'libre', '1111'),
 (1, 1002, 'libre', '2222'),
 (1, 1003, 'libre', '3333'),
 (1, 1004, 'libre', '4444'),
-(1, 1005, 'libre', '5555');
+(1, 1005, 'libre', '5555'),
+(1, 1006, 'libre', '6666'),
+(1, 1007, 'libre', '7777'),
+(1, 1008, 'libre', '8888'),
+(1, 1009, 'libre', '9999'),
+(1, 1010, 'libre', '1010');
 
--- Mesas para Restaurante 2 (Pizzería Italia - Mesas 1001 al 1004)
+-- Mesas para Restaurante 2 (Pizzería Italia - Mesas 1001 al 1010)
 INSERT INTO mesas (id_restaurante, numero, estado, pin) VALUES 
 (2, 1001, 'libre', '9991'),
 (2, 1002, 'libre', '9992'),
 (2, 1003, 'libre', '9993'),
-(2, 1004, 'libre', '9994');
+(2, 1004, 'libre', '9994'),
+(2, 1005, 'libre', '9995'),
+(2, 1006, 'libre', '9996'),
+(2, 1007, 'libre', '9997'),
+(2, 1008, 'libre', '9998'),
+(2, 1009, 'libre', '9999'),
+(2, 1010, 'libre', '2020');
 
 
 -- 4.4. Sembrar Productos
@@ -206,8 +231,34 @@ INSERT INTO productos (id_restaurante, nombre, descripcion, precio, id_categoria
 (2, 'Copa de Vino Tinto', 'Vino de la casa Chianti', 14.00, 4, 'disponible'),
 (2, 'Coca-Cola 500ml', 'Gaseosa sabor original helada', 5.00, 4, 'disponible');
 
+-- Productos Adicionales para La Fogata (id_restaurante = 1)
+INSERT INTO productos (id_restaurante, nombre, descripcion, precio, id_categoria, estado) VALUES
+(1, 'Pollo a la brasa 1 entero', 'Pollo entero marinado con papas fritas y ensalada familiar', 62.00, (SELECT id_categoria FROM categorias WHERE id_restaurante = 1 AND nombre = 'Pollos'), 'disponible'),
+(1, 'Pechuga a la parrilla', 'Filete de pechuga tierna a la parrilla con papas fritas', 24.00, (SELECT id_categoria FROM categorias WHERE id_restaurante = 1 AND nombre = 'Pollos'), 'disponible'),
+(1, 'Chicha Morada 1L', 'Bebida de maíz morado, piña, manzana y canela helada', 12.00, (SELECT id_categoria FROM categorias WHERE id_restaurante = 1 AND nombre = 'Bebidas'), 'disponible'),
+(1, 'Inca Kola 1.5L', 'Gaseosa tamaño familiar helada', 9.50, (SELECT id_categoria FROM categorias WHERE id_restaurante = 1 AND nombre = 'Bebidas'), 'disponible'),
+(1, 'Anticuchos', 'Dos palitos de corazón de res con papa dorada y choclo', 22.00, (SELECT id_categoria FROM categorias WHERE id_restaurante = 1 AND nombre = 'Entradas y Guarniciones'), 'disponible'),
+(1, 'Porción de Tequeños', 'Tequeños rellenos de queso con salsa guacamole', 14.00, (SELECT id_categoria FROM categorias WHERE id_restaurante = 1 AND nombre = 'Entradas y Guarniciones'), 'disponible'),
+(1, 'Porción de Papas Fritas Extra', 'Papas amarillas crocantes recién fritas', 8.50, (SELECT id_categoria FROM categorias WHERE id_restaurante = 1 AND nombre = 'Entradas y Guarniciones'), 'disponible'),
+(1, 'Suspiro a la Limeña', 'Dulce tradicional de yemas y leche evaporada con merengue', 10.00, (SELECT id_categoria FROM categorias WHERE id_restaurante = 1 AND nombre = 'Postres'), 'disponible'),
+(1, 'Tres Leches de Lúcuma', 'Pastel húmedo sabor lúcuma bañado en tres leches', 12.00, (SELECT id_categoria FROM categorias WHERE id_restaurante = 1 AND nombre = 'Postres'), 'disponible');
+
+-- Productos Adicionales para Pizzería Italia (id_restaurante = 2)
+INSERT INTO productos (id_restaurante, nombre, descripcion, precio, id_categoria, estado) VALUES
+(2, 'Pizza Cuatro Quesos', 'Mozzarella, gorgonzola, parmesano y fontina', 34.00, (SELECT id_categoria FROM categorias WHERE id_restaurante = 2 AND nombre = 'Pizzas'), 'disponible'),
+(2, 'Pizza Hawaiana', 'Mozzarella, jamón inglés y piña en almíbar', 28.00, (SELECT id_categoria FROM categorias WHERE id_restaurante = 2 AND nombre = 'Pizzas'), 'disponible'),
+(2, 'Pizza Vegetariana', 'Pimientos, champiñones, aceitunas verdes y cebolla blanca', 30.00, (SELECT id_categoria FROM categorias WHERE id_restaurante = 2 AND nombre = 'Pizzas'), 'disponible'),
+(2, 'Limonada Italiana', 'Limonada frozen con toque de menta y jengibre', 8.00, (SELECT id_categoria FROM categorias WHERE id_restaurante = 2 AND nombre = 'Bebidas'), 'disponible'),
+(2, 'Botella de Vino Chianti', 'Vino tinto italiano tradicional de la casa', 48.00, (SELECT id_categoria FROM categorias WHERE id_restaurante = 2 AND nombre = 'Bebidas'), 'disponible'),
+(2, 'Focaccia con Romero', 'Pan plano italiano sazonado con aceite de oliva y romero', 12.00, (SELECT id_categoria FROM categorias WHERE id_restaurante = 2 AND nombre = 'Entradas'), 'disponible'),
+(2, 'Bruschetta de Pomodoro', 'Pan tostado con tomate picado, albahaca y aceite de oliva', 10.00, (SELECT id_categoria FROM categorias WHERE id_restaurante = 2 AND nombre = 'Entradas'), 'disponible'),
+(2, 'Tiramisú Tradicional', 'Bizcochos de café, licor de amaretto y crema de mascarpone', 16.00, (SELECT id_categoria FROM categorias WHERE id_restaurante = 2 AND nombre = 'Postres'), 'disponible'),
+(2, 'Panna Cotta de Fresa', 'Flan de crema de leche con coulis de fresas frescas', 12.00, (SELECT id_categoria FROM categorias WHERE id_restaurante = 2 AND nombre = 'Postres'), 'disponible');
+
+
+
 
 -- 4.5. Sembrar un Personal Administrativo por cada Restaurante
 INSERT INTO usuarios (id_restaurante, nombre, correo, contrasena, rol, estado) VALUES
-(1, 'Administrador Fogata', 'admin@lafogata.com', 'fisi2025', 'admin', 'activo'),
-(2, 'Administrador Italia', 'admin@pizzaitalia.com', 'italia2025', 'admin', 'activo');
+(1, 'Administrador Fogata', 'admin@lafogata.com', '$2b$12$IBNOsV3zT3/0oYdQkWIo..gYW6wIzWLfUaDvQ0wn2oM8OO9EgpLFC', 'admin', 'activo'),
+(2, 'Administrador Italia', 'admin@pizzaitalia.com', '$2b$12$lJLn/Q6qtkJBTVyDQ.ceCeeVZVgRjc5QC77XV7QKnN.ck9/PtVVqK', 'admin', 'activo');

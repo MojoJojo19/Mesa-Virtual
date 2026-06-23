@@ -1,3 +1,5 @@
+const SIMULACION_HABILITADA = false;
+
 const getApiUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
   // Adaptador automático para emulador Android (10.0.2.2) o pruebas en red local (192.168.x.x)
@@ -80,7 +82,8 @@ export const getPlatos = async (idRestaurante = null) => {
     const res = await fetchWithTimeout(url)
     if (!res.ok) throw new Error('Error')
     return await res.json()
-  } catch {
+  } catch (err) {
+    if (!SIMULACION_HABILITADA) throw err;
     console.warn('Backend no disponible, usando datos mock')
     return MOCK_PLATOS
   }
@@ -92,7 +95,8 @@ export const getCategorias = async (idRestaurante = null) => {
     const res = await fetchWithTimeout(url)
     if (!res.ok) throw new Error('Error')
     return await res.json()
-  } catch {
+  } catch (err) {
+    if (!SIMULACION_HABILITADA) throw err;
     return [
       { id_categoria: 1, nombre: 'Pollos' },
       { id_categoria: 2, nombre: 'Bebidas' },
@@ -107,7 +111,8 @@ export const getMesa = async (idMesa) => {
     const res = await fetchWithTimeout(`${API_URL}/mesas/${idMesa}`)
     if (!res.ok) throw new Error('Error')
     return await res.json()
-  } catch {
+  } catch (err) {
+    if (!SIMULACION_HABILITADA) throw err;
     return { ...MOCK_MESA, id_mesa: idMesa }
   }
 }
@@ -135,7 +140,8 @@ export const actualizarConfigMesa = async (idMesa, tipoPago) => {
     })
     if (!res.ok) throw new Error('Error')
     return await res.json()
-  } catch {
+  } catch (err) {
+    if (!SIMULACION_HABILITADA) throw err;
     return { success: true, tipo_pago: tipoPago }
   }
 }
@@ -159,7 +165,8 @@ export const getRestaurante = async (idRestaurante) => {
     const res = await fetchWithTimeout(`${API_URL}/restaurantes/${idRestaurante}`)
     if (!res.ok) throw new Error('Error')
     return await res.json()
-  } catch {
+  } catch (err) {
+    if (!SIMULACION_HABILITADA) throw err;
     return { id_restaurante: idRestaurante, tiempo_espera_global: 15 }
   }
 }
@@ -174,7 +181,8 @@ export const validarPin = async (idMesa, pin) => {
     if (!res.ok) throw new Error('Error')
     const data = await res.json()
     return data.valido
-  } catch {
+  } catch (err) {
+    if (!SIMULACION_HABILITADA) throw err;
     const mockMesas = getMockMesasLocales()
     const mesa = mockMesas.find(m => m.id_mesa === parseInt(idMesa))
     return mesa ? mesa.pin === pin : false
@@ -187,7 +195,8 @@ export const validarToken = async (idMesa, token) => {
     if (!res.ok) throw new Error('Error')
     const data = await res.json()
     return data.valido
-  } catch {
+  } catch (err) {
+    if (!SIMULACION_HABILITADA) throw err;
     const mockMesas = getMockMesasLocales()
     const mesa = mockMesas.find(m => m.id_mesa === parseInt(idMesa))
     return mesa ? mesa.token_sesion === token : false;
@@ -203,7 +212,8 @@ export const buscarMesaPorPin = async (pin) => {
     })
     if (!res.ok) throw new Error('Error')
     return await res.json()
-  } catch {
+  } catch (err) {
+    if (!SIMULACION_HABILITADA) throw err;
     // Fallback mock: buscar en los datos locales simulados
     const mockMesas = getMockMesasLocales()
     const mesa = mockMesas.find(m => m.pin === pin)
@@ -234,6 +244,7 @@ export const loginPersonal = async (correo, contrasena) => {
     if (!res.ok) throw new Error('Credenciales incorrectas')
     return await res.json()
   } catch (err) {
+    if (!SIMULACION_HABILITADA) throw err;
     // Mock login para desarrollo sin backend
     if (correo === 'admin@fogata.com' || correo === 'mesero@fogata.com') {
       return {
@@ -264,6 +275,7 @@ export const crearComensal = async (nombre, avatar, idMesa) => {
     if (e.message && e.message !== 'Error' && e.message !== 'Error al ingresar') {
       throw e; // Lanzar error específico del backend para que Ingreso.jsx lo muestre
     }
+    if (!SIMULACION_HABILITADA) throw e;
     // Fallback: simular creación exitosa si el error es de conexión genérica
     return { id_comensal: Date.now(), nombre, avatar, id_mesa: parseInt(idMesa) }
   }
@@ -286,7 +298,8 @@ export const getComensalesDeMesa = async (idMesa) => {
     const res = await fetchWithTimeout(`${API_URL}/mesas/${idMesa}/comensales`)
     if (!res.ok) throw new Error('Error')
     return await res.json()
-  } catch {
+  } catch (err) {
+    if (!SIMULACION_HABILITADA) throw err;
     return []
   }
 }
@@ -300,7 +313,8 @@ export const enviarPedido = async (idMesa, items) => {
     })
     if (!res.ok) throw new Error('Error')
     return await res.json()
-  } catch {
+  } catch (err) {
+    if (!SIMULACION_HABILITADA) throw err;
     return { id_pedido: Date.now(), items, estado: 'pendiente' }
   }
 }
@@ -314,7 +328,8 @@ export const actualizarCarritoComensal = async (idComensal, estadoPedido, carrit
     })
     if (!res.ok) throw new Error('Error')
     return await res.json()
-  } catch {
+  } catch (err) {
+    if (!SIMULACION_HABILITADA) throw err;
     return { success: true } // Fallback simulado
   }
 }
@@ -359,7 +374,8 @@ export const llamarMesero = async (idMesa, tipo = 'llamar_mesero') => {
     if (!res.ok) throw new Error('Error');
     const data = await res.json();
     return data;
-  } catch {
+  } catch (err) {
+    if (!SIMULACION_HABILITADA) throw err;
     const nuevoMock = {
       id_asistencia: Date.now(),
       tipo: tipo,
@@ -383,7 +399,8 @@ export const pedirCuenta = async (idMesa) => {
     if (!res.ok) throw new Error('Error');
     const data = await res.json();
     return data;
-  } catch {
+  } catch (err) {
+    if (!SIMULACION_HABILITADA) throw err;
     const nuevoMock = {
       id_asistencia: Date.now(),
       tipo: 'pedir_cuenta',
@@ -402,7 +419,8 @@ export const getAsistencias = async (idRestaurante = null) => {
     const res = await fetchWithTimeout(url);
     if (!res.ok) throw new Error('Error');
     return await res.json();
-  } catch {
+  } catch (err) {
+    if (!SIMULACION_HABILITADA) throw err;
     return getMockAsistenciasLocales();
   }
 };
@@ -414,7 +432,8 @@ export const atenderAsistencia = async (idAsistencia) => {
     });
     if (!res.ok) throw new Error('Error');
     return await res.json();
-  } catch {
+  } catch (err) {
+    if (!SIMULACION_HABILITADA) throw err;
     try {
       const actuales = getMockAsistenciasLocales();
       const actualizados = actuales.map(a => 
@@ -472,7 +491,8 @@ export const getMesas = async (idRestaurante = null) => {
     const data = await res.json();
     // Ordenar mesas por número ascendente
     return data.sort((a, b) => a.numero - b.numero);
-  } catch {
+  } catch (err) {
+    if (!SIMULACION_HABILITADA) throw err
     return getMockMesasLocales();
   }
 };
@@ -520,7 +540,8 @@ export const liberarMesa = async (idMesa) => {
     });
     if (!res.ok) throw new Error('Error');
     return await res.json();
-  } catch {
+  } catch (err) {
+    if (!SIMULACION_HABILITADA) throw err;
     try {
       // 1. Liberar Mesa (estado libre, nuevo PIN, limpiar comensales)
       const actuales = getMockMesasLocales();
@@ -590,7 +611,8 @@ export const getPedidosDeMesa = async (idMesa) => {
 
     // Retornar solo pedidos ACTIVOS (no pagados ni cancelados) para logística
     return pedidosConDetalles.filter(p => p.estado !== 'pagado' && p.estado !== 'cancelado');
-  } catch {
+  } catch (err) {
+    if (!SIMULACION_HABILITADA) throw err
     // Mock fallbacks
     const mockPeds = getMockPedidosLocales();
     const tablePeds = mockPeds[idMesa] || [];
@@ -651,7 +673,8 @@ export const getPedidosTodos = async (idRestaurante = null) => {
       }
     }));
     return pedidosConDetalles;
-  } catch {
+  } catch (err) {
+    if (!SIMULACION_HABILITADA) throw err;
     const mockPeds = getMockPedidosLocales();
     let todos = [];
     Object.keys(mockPeds).forEach(mesaId => {
@@ -705,7 +728,8 @@ export const registrarPago = async (idPedido, montoTotal, propina, metodoPago) =
     });
     if (!res.ok) throw new Error('Error');
     return await res.json();
-  } catch {
+  } catch (err) {
+    if (!SIMULACION_HABILITADA) throw err
     let items = [];
     let idMesa = 0;
     try {
@@ -833,7 +857,8 @@ export const getPagos = async (idRestaurante = null) => {
       return { ...pago, id_mesa: 1, items: [] };
     }));
     return pagosEnriquecidos;
-  } catch {
+  } catch (err) {
+    if (!SIMULACION_HABILITADA) throw err;
     return seedMockPagos();
   }
 };
@@ -845,7 +870,8 @@ export const actualizarEstadoPedido = async (idPedido, nuevoEstado) => {
     });
     if (!res.ok) throw new Error('Error');
     return await res.json();
-  } catch {
+  } catch (err) {
+    if (!SIMULACION_HABILITADA) throw err;
     try {
       const peds = getMockPedidosLocales();
       Object.keys(peds).forEach(mesaId => {

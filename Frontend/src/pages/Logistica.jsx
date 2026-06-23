@@ -32,6 +32,11 @@ export default function Logistica() {
   const asistenciasPrevias = useRef(new Set())
   const timeoutExtraTimeRefs = useRef({})
 
+  const obtenerNumeroMesa = (idMesa) => {
+    const mesa = mesas.find(m => m.id_mesa === parseInt(idMesa))
+    return mesa ? mesa.numero : idMesa
+  }
+
   // Sintetizador Web Audio para un sonido limpio y compatible sin requerir archivos externos
   const reproducirSonidoAlerta = () => {
     try {
@@ -500,7 +505,7 @@ export default function Logistica() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                   <div>
                     <div style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-1)' }}>
-                      Mesa {com.id_mesa}
+                      Mesa {obtenerNumeroMesa(com.id_mesa)}
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>
                       Pedido #{com.id_pedido} • {obtenerTiempoTranscurrido(com.fecha_hora)}
@@ -651,7 +656,7 @@ export default function Logistica() {
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     <span style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-1)' }}>
-                      Mesa {p.id_mesa}
+                      Mesa {obtenerNumeroMesa(p.id_mesa)}
                     </span>
                     <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>
                       Pago #{p.id_pago} • {new Date(p.fecha_pago).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -720,7 +725,7 @@ export default function Logistica() {
 
           <div style={{ fontSize: '12px', borderBottom: '1px dashed #cbd5e1', paddingBottom: '8px', marginBottom: '8px', lineHeight: '1.4' }}>
             <div><strong>Fecha:</strong> {new Date(ticketSeleccionado.fecha_pago).toLocaleDateString()} {new Date(ticketSeleccionado.fecha_pago).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-            <div><strong>Mesa:</strong> Mesa {ticketSeleccionado.id_mesa}</div>
+            <div><strong>Mesa:</strong> Mesa {obtenerNumeroMesa(ticketSeleccionado.id_mesa)}</div>
             <div><strong>Cajero:</strong> SwiftTable Auto</div>
           </div>
 
@@ -848,7 +853,7 @@ export default function Logistica() {
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                         <span style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-1)' }}>
-                          Mesa {ped.id_mesa}
+                          Mesa {obtenerNumeroMesa(ped.id_mesa)}
                         </span>
                         <span style={{ 
                           fontSize: '11px', 
@@ -921,7 +926,7 @@ export default function Logistica() {
           {listos.map(ped => (
             <div key={ped.id_pedido} style={{ background: 'var(--surface)', padding: '12px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--border)' }}>
               <div>
-                <span style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-1)' }}>Mesa {ped.id_mesa}</span>
+                <span style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-1)' }}>Mesa {obtenerNumeroMesa(ped.id_mesa)}</span>
                 <div style={{ fontSize: '12px', color: 'var(--text-2)', marginTop: '2px' }}>
                   {ped.items && ped.items.map(it => `${it.cantidad}x ${it.nombre}`).join(', ')}
                 </div>
@@ -1462,7 +1467,7 @@ export default function Logistica() {
                             border: `1px solid ${esPendiente ? info.border : 'var(--border)'}`
                           }}>
                             <span style={{ fontSize: '9px', fontWeight: '700', textTransform: 'uppercase', opacity: 0.8 }}>Mesa</span>
-                            <span style={{ fontSize: '20px', fontWeight: '800' }}>{asist.id_mesa}</span>
+                            <span style={{ fontSize: '20px', fontWeight: '800' }}>{obtenerNumeroMesa(asist.id_mesa)}</span>
                           </div>
 
                           <div>
@@ -1532,7 +1537,7 @@ export default function Logistica() {
               Confirmar Liberación
             </h3>
             <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: '1.5', marginBottom: '24px' }}>
-              ¿Estás seguro de que deseas cerrar la sesión y liberar la <strong>Mesa {mesaALiberar}</strong>? Esto borrará los comensales actuales.
+              ¿Estás seguro de que deseas cerrar la sesión y liberar la <strong>Mesa {obtenerNumeroMesa(mesaALiberar)}</strong>? Esto borrará los comensales actuales.
             </p>
             <div style={{ display: 'flex', gap: '12px' }}>
               <button 

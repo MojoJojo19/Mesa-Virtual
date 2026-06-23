@@ -25,7 +25,7 @@ class Asistencia(Base):
     # Antes era String(20) suelto; lo pasamos a Enum para que no se puedan
     # guardar valores arbitrarios y sea consistente con el resto del proyecto.
     estado = Column(Enum(EstadoAsistencia), default=EstadoAsistencia.pendiente)
-    fecha_hora = Column(DateTime, server_default=func.now())
+    fecha_hora = Column(DateTime(timezone=True), server_default=func.now())
 
     id_mesa = Column(Integer, ForeignKey("mesas.id_mesa"), nullable=False, index=True)
 

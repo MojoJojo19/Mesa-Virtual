@@ -1,0 +1,65 @@
+========================================================================
+             CREDENCIALES Y PINS - SWIFTTABLE (MESA VIRTUAL)
+========================================================================
+
+------------------------------------------------------------------------
+1. ACCESO DEL PERSONAL (ADMINISTRACIÓN / LOGÍSTICA)
+------------------------------------------------------------------------
+* Restaurante 1: La Fogata
+  - Usuario / Correo: admin@lafogata.com
+  - Contraseña: fisi2025
+
+* Restaurante 2: Pizzería Italia
+  - Usuario / Correo: admin@pizzaitalia.com
+  - Contraseña: italia2025
+
+------------------------------------------------------------------------
+2. PINS DE COMENSALES (ESTADO ACTUAL EN TU BASE DE DATOS ACTIVA)
+------------------------------------------------------------------------
+Si estás probando con la base de datos tal como está ahora en Supabase, 
+usa estos números de mesa y sus respectivos PINs de acceso:
+
+* RESTAURANTE 1: La Fogata
+  - Mesa N° 1: PIN -> 8201
+  - Mesa N° 2: PIN -> 2222
+  - Mesa N° 3: PIN -> 3333
+  - Mesa N° 4: PIN -> 4444
+  - Mesa N° 5: PIN -> 5555
+  - Mesa N° 7: PIN -> 0175
+
+* RESTAURANTE 2: Pizzería Italia
+  - Mesa N° 1: PIN -> 8691
+  - Mesa N° 2: PIN -> 9992
+  - Mesa N° 3: PIN -> 9993
+  - Mesa N° 4: PIN -> 9994
+
+------------------------------------------------------------------------
+3. PINS DE COMENSALES (SI VUELVES A EJECUTAR EL ESQUEMA DE 'supabase_schema.sql')
+------------------------------------------------------------------------
+Si ejecutas el archivo 'supabase_schema.sql' en el editor SQL de Supabase 
+para limpiar e inicializar la base de datos desde cero, se sembrarán 10 mesas 
+por restaurante con la siguiente numeración y PINs:
+
+* RESTAURANTE 1: La Fogata (Mesas 1001 al 1010)
+  - Mesa 1001: PIN -> 1111
+  - Mesa 1002: PIN -> 2222
+  - Mesa 1003: PIN -> 3333
+  - Mesa 1004: PIN -> 4444
+  - Mesa 1005: PIN -> 5555
+  - Mesa 1006: PIN -> 6666
+  - Mesa 1007: PIN -> 7777
+  - Mesa 1008: PIN -> 8888
+  - Mesa 1009: PIN -> 9999
+  - Mesa 1010: PIN -> 1010
+
+* RESTAURANTE 2: Pizzería Italia (Mesas 1001 al 1010)
+  - Mesa 1001: PIN -> 9991
+  - Mesa 1002: PIN -> 9992
+  - Mesa 1003: PIN -> 9993
+  - Mesa 1004: PIN -> 9994
+  - Mesa 1005: PIN -> 9995
+  - Mesa 1006: PIN -> 9996
+  - Mesa 1007: PIN -> 9997
+  - Mesa 1008: PIN -> 9998
+  - Mesa 1009: PIN -> 9999
+  - Mesa 1010: PIN -> 2020

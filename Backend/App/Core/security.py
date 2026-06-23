@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
@@ -13,17 +13,17 @@ SECRET_KEY = "swift_table_super_secret_key_123" # En producción usar variables 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
-# Contexto de contraseñas
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 # Para que FastAPI sepa dónde enviar al usuario para loguearse si no tiene token
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
-def verificar_contrasena(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+def verificar_contrasena(plain_password: str, hashed_password: str) -> bool:
+    try:
+        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except Exception:
+        return False
 
-def obtener_hash_contrasena(password):
-    return pwd_context.hash(password)
+def obtener_hash_contrasena(password: str) -> str:
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 def crear_token_acceso(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()

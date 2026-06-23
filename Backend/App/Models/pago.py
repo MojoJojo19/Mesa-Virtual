@@ -18,7 +18,7 @@ class Pago(Base):
     monto_total = Column(Numeric(10, 2), nullable=False)
     propina = Column(Numeric(10, 2), nullable=True)
     metodo_pago = Column(Enum(MetodoPago), nullable=False)
-    fecha_pago = Column(DateTime, server_default=func.now())
+    fecha_pago = Column(DateTime(timezone=True), server_default=func.now())
 
     id_pedido = Column(Integer, ForeignKey("pedidos.id_pedido"), unique=True, nullable=False)
     id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario", ondelete="SET NULL"), nullable=True)

@@ -165,7 +165,7 @@ export default function SelectorRol() {
                 </div>
               )}
               <span style={{ fontSize: '11px', color: 'var(--text-3)', display: 'block', textAlign: 'center', marginTop: '8px' }}>
-                Demo: mesero@fogata.com / admin@fogata.com
+                La Fogata: admin@lafogata.com (fisi2025) | Pizzería Italia: admin@pizzaitalia.com (italia2025)
               </span>
             </div>
 

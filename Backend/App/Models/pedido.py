@@ -17,7 +17,7 @@ class Pedido(Base):
 
     id_pedido = Column(Integer, primary_key=True, autoincrement=True)
     id_restaurante = Column(Integer, ForeignKey("restaurantes.id_restaurante", ondelete="CASCADE"), nullable=False, index=True)
-    fecha_hora = Column(DateTime, server_default=func.now())
+    fecha_hora = Column(DateTime(timezone=True), server_default=func.now())
     estado = Column(Enum(EstadoPedido), default=EstadoPedido.pendiente)
 
     id_mesa = Column(Integer, ForeignKey("mesas.id_mesa"), nullable=False)
