@@ -71,26 +71,26 @@ export default function SelectorRol() {
     setPinError(false)
   }
 
-  // ── Lógica del panel de Personal ──────────────────────────────────────────
+  // ── Lógica del panel de Personal (Modo Libre / Sin contraseña) ────────────
   const handleEntrarComoPersonal = async (e) => {
     e.preventDefault()
-    try {
-      const data = await loginPersonal(correo, contrasena)
-      localStorage.setItem('swifttable_staff_token', data.access_token)
-      localStorage.setItem('swifttable_staff_user', JSON.stringify({
-        id_usuario: data.id_usuario,
-        rol: data.rol,
-        correo: correo
-      }))
-      localStorage.setItem('swifttable_id_restaurante', data.id_restaurante)
-      localStorage.setItem('swifttable_nombre_restaurante', data.nombre_restaurante)
-      toast(`Acceso concedido — ${data.nombre_restaurante}`, 'success')
-      navigate('/logistica')
-    } catch (err) {
-      setStaffError(true)
-      toast('Credenciales incorrectas.', 'error')
-      setTimeout(() => setStaffError(false), 1500)
-    }
+    
+    // Determinar restaurante basado en el correo escrito
+    const esPizza = correo.toLowerCase().includes('pizza') || correo.toLowerCase().includes('italia')
+    const idRestaurante = esPizza ? 2 : 1
+    const nombreRest = esPizza ? 'Pizzería Italia' : 'La Fogata'
+    
+    localStorage.setItem('swifttable_staff_token', 'mock_free_token')
+    localStorage.setItem('swifttable_staff_user', JSON.stringify({
+      id_usuario: esPizza ? 2 : 1,
+      rol: 'admin',
+      correo: correo || (esPizza ? 'admin@pizzaitalia.com' : 'admin@lafogata.com')
+    }))
+    localStorage.setItem('swifttable_id_restaurante', idRestaurante)
+    localStorage.setItem('swifttable_nombre_restaurante', nombreRest)
+    
+    toast(`Acceso Concedido (Modo Libre) — ${nombreRest}`, 'success')
+    navigate('/logistica')
   }
 
   // ── Render: Panel Staff (modal/overlay compacto) ───────────────────────────
