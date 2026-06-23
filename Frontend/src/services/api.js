@@ -139,6 +139,31 @@ export const validarToken = async (idMesa, token) => {
   }
 }
 
+export const buscarMesaPorPin = async (pin) => {
+  try {
+    const res = await fetchWithTimeout(`${API_URL}/mesas/buscar-por-pin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin })
+    })
+    if (!res.ok) throw new Error('Error')
+    return await res.json()
+  } catch {
+    // Fallback mock: buscar en los datos locales simulados
+    const mockMesas = getMockMesasLocales()
+    const mesa = mockMesas.find(m => m.pin === pin)
+    if (mesa) {
+      return {
+        encontrado: true,
+        id_mesa: mesa.id_mesa,
+        numero_mesa: mesa.numero,
+        nombre_restaurante: 'La Fogata'
+      }
+    }
+    return { encontrado: false }
+  }
+}
+
 export const crearComensal = async (nombre, avatar, idMesa) => {
   try {
     const res = await fetchWithTimeout(`${API_URL}/comensales/`, {

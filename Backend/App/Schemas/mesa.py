@@ -38,3 +38,17 @@ class ValidarPinResponse(BaseModel):
 
 class MesaEstadoUpdate(BaseModel):
     estado: str
+
+
+# ── Búsqueda de mesa por PIN (acceso manual desde la pantalla de inicio) ──────
+class BuscarPorPinRequest(BaseModel):
+    pin: str
+
+class BuscarPorPinResponse(BaseModel):
+    encontrado: bool
+    id_mesa: Optional[int] = None
+    numero_mesa: Optional[int] = None
+    nombre_restaurante: Optional[str] = None
+
+    class Config:
+        from_attributes = True

@@ -10,7 +10,8 @@ from App.Models.mesa import Mesa, EstadoMesa
 from App.Models.comensal import Comensal
 from App.Schemas.mesa import (
     MesaCreate, MesaResponse, MesaCreateResponse,
-    ValidarPinRequest, ValidarPinResponse, MesaEstadoUpdate
+    ValidarPinRequest, ValidarPinResponse, MesaEstadoUpdate,
+    BuscarPorPinRequest, BuscarPorPinResponse
 )
 from App.Schemas.comensal import ComensalResponse
 from App.Utils.qr_generator import generar_qr_mesa
@@ -119,6 +120,38 @@ def listar_comensales_de_mesa(id_mesa: int, db: Session = Depends(get_db)):
     if not mesa:
         raise HTTPException(status_code=404, detail="Mesa no encontrada")
     return db.query(Comensal).filter(Comensal.id_mesa == id_mesa).all()
+
+
+@router.post("/buscar-por-pin", response_model=BuscarPorPinResponse)
+def buscar_mesa_por_pin(datos: BuscarPorPinRequest, db: Session = Depends(get_db)):
+    """
+    Permite al cliente ingresar manualmente en la app usando solo el PIN
+    de 4 dígitos impreso en el centro de mesa, sin necesitar conocer el id_mesa.
+    Devuelve el id_mesa y el número de mesa si el PIN es válido.
+    """
+    # Buscar primero en mesas activas (ocupadas)
+    mesa = db.query(Mesa).filter(
+        Mesa.pin == datos.pin,
+        Mesa.estado != EstadoMesa.libre
+    ).first()
+
+    # Búsqueda más permisiva: incluir mesas libres (por si el PIN aún no fue activado)
+    if not mesa:
+        mesa = db.query(Mesa).filter(Mesa.pin == datos.pin).first()
+
+    if not mesa:
+        return BuscarPorPinResponse(encontrado=False)
+
+    nombre_rest = None
+    if mesa.restaurante:
+        nombre_rest = mesa.restaurante.nombre
+
+    return BuscarPorPinResponse(
+        encontrado=True,
+        id_mesa=mesa.id_mesa,
+        numero_mesa=mesa.numero,
+        nombre_restaurante=nombre_rest
+    )
 
 
 @router.post("/{id_mesa}/liberar", response_model=MesaResponse)

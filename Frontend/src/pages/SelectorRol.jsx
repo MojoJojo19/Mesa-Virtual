@@ -1,332 +1,403 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Flame, QrCode, Shield, Check, X, AlertCircle } from 'lucide-react'
+import { Flame, Shield, Delete, X, AlertCircle } from 'lucide-react'
 import { useToast } from '../components/Toast'
-import { getMesas } from '../services/api'
+import { buscarMesaPorPin } from '../services/api'
 
 export default function SelectorRol() {
   const navigate = useNavigate()
   const { toast } = useToast()
-  
-  const [rolSeleccionado, setRolSeleccionado] = useState(null) // 'cliente' | 'staff' | null
-  const [mesaElegida, setMesaElegida] = useState('')
+
+  // ── Estado principal ──────────────────────────────────────────────────────
+  const [pin, setPin] = useState('')
+  const [buscando, setBuscando] = useState(false)
+  const [pinError, setPinError] = useState(false)
+
+  // ── Estado del panel de Personal ──────────────────────────────────────────
+  const [mostrarPanelStaff, setMostrarPanelStaff] = useState(false)
   const [pinPersonal, setPinPersonal] = useState('')
-  const [intentosError, setIntentosError] = useState(false)
-  const [mesasDisponibles, setMesasDisponibles] = useState([])
+  const [staffError, setStaffError] = useState(false)
 
-  useEffect(() => {
-    // Limpiar caché antigua de desarrollo una sola vez para forzar carga limpia
+  // ── Limpiar caché de desarrollo (solo primera vez) ────────────────────────
+  React.useEffect(() => {
     if (!localStorage.getItem('swifttable_v2_clean')) {
-      localStorage.clear();
-      localStorage.setItem('swifttable_v2_clean', 'true');
-      window.location.reload();
-      return;
+      localStorage.clear()
+      localStorage.setItem('swifttable_v2_clean', 'true')
+      window.location.reload()
     }
+  }, [])
 
-    if (rolSeleccionado === 'cliente') {
-      const cargarMesas = async () => {
-        try {
-          const data = await getMesas()
-          setMesasDisponibles(data || [])
-        } catch (e) {
-          console.error(e)
+  // ── Lógica del teclado de PIN de mesa ─────────────────────────────────────
+  const handlePadClick = async (num) => {
+    if (buscando) return
+    const newPin = pin + num
+    setPin(newPin)
+    setPinError(false)
+
+    if (newPin.length === 4) {
+      setBuscando(true)
+      try {
+        const result = await buscarMesaPorPin(newPin)
+        if (result.encontrado) {
+          if (result.nombre_restaurante) {
+            localStorage.setItem('swifttable_nombre_restaurante', result.nombre_restaurante)
+          }
+          toast(`¡Mesa ${result.numero_mesa} encontrada! Ingresando...`, 'success')
+          setTimeout(() => {
+            navigate(`/mesa/${result.id_mesa}/ingreso`)
+          }, 400)
+        } else {
+          setPinError(true)
+          toast('PIN no válido. Revisa el número en el centro de tu mesa.', 'error')
+          setTimeout(() => {
+            setPin('')
+            setPinError(false)
+          }, 1200)
         }
+      } catch {
+        setPinError(true)
+        toast('Error de conexión. Inténtalo de nuevo.', 'error')
+        setTimeout(() => { setPin(''); setPinError(false) }, 1200)
+      } finally {
+        setBuscando(false)
       }
-      cargarMesas()
-    }
-  }, [rolSeleccionado])
-
-  const handleEntrarComoCliente = (e) => {
-    e.preventDefault()
-    if (!mesaElegida) {
-      toast('Por favor, selecciona una mesa', 'error')
-      return
-    }
-    toast(`Accediendo a Mesa ${mesaElegida}`, 'success')
-    navigate(`/mesa/${mesaElegida}`)
-  }
-
-  const handleEntrarComoClienteConToken = (e) => {
-    e.preventDefault()
-    if (!mesaElegida) {
-      toast('Por favor, selecciona una mesa', 'error')
-      return
-    }
-    const mesaObj = mesasDisponibles.find(m => m.id_mesa === parseInt(mesaElegida))
-    const token = mesaObj ? mesaObj.token_sesion : ''
-    
-    if (token) {
-      toast(`Simulando escaneo QR para Mesa ${mesaElegida}`, 'success')
-      navigate(`/mesa/${mesaElegida}?token=${token}`)
-    } else {
-      toast(`Mesa sin token activo. Accediendo normalmente.`, 'info')
-      navigate(`/mesa/${mesaElegida}`)
     }
   }
 
+  const handleDelete = () => {
+    if (buscando) return
+    setPin(prev => prev.slice(0, -1))
+    setPinError(false)
+  }
+
+  // ── Lógica del panel de Personal ──────────────────────────────────────────
   const handleEntrarComoPersonal = (e) => {
     e.preventDefault()
-    // El PIN de simulación será "4321" o "1234"
     if (pinPersonal === '1234') {
       localStorage.setItem('swifttable_id_restaurante', '1')
       localStorage.setItem('swifttable_nombre_restaurante', 'La Fogata')
-      toast('Acceso concedido a Logística - La Fogata', 'success')
+      toast('Acceso concedido — La Fogata', 'success')
       navigate('/logistica')
     } else if (pinPersonal === '4321') {
       localStorage.setItem('swifttable_id_restaurante', '2')
       localStorage.setItem('swifttable_nombre_restaurante', 'Pizzería Italia')
-      toast('Acceso concedido a Logística - Pizzería Italia', 'success')
+      toast('Acceso concedido — Pizzería Italia', 'success')
       navigate('/logistica')
     } else {
-      setIntentosError(true)
+      setStaffError(true)
       setPinPersonal('')
-      toast('PIN incorrecto. Reintente.', 'error')
-      setTimeout(() => setIntentosError(false), 2000)
+      toast('PIN de personal incorrecto.', 'error')
+      setTimeout(() => setStaffError(false), 1500)
     }
   }
 
-  return (
-    <>
-      {/* Native App Bar */}
-      <div className="native-app-bar" style={{ background: 'transparent', border: 'none', backdropFilter: 'none' }}>
-        <div className="left-action"></div>
-        <div className="title" style={{ color: 'var(--text-1)' }}></div>
-        <div className="right-action"></div>
-      </div>
-
-      <div className="content-wrapper flex-col" style={{ padding: '0 24px 24px', marginTop: '-20px' }}>
-        
-        {/* Header Hero */}
-        <div style={{ textAlign: 'center', marginBottom: '32px', marginTop: '16px' }}>
-          <div style={{ 
-            width: '72px', height: '72px', borderRadius: '22px', 
-            background: 'linear-gradient(135deg, var(--accent), var(--accent-2))', color: 'white',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 16px',
-            boxShadow: '0 10px 20px rgba(225, 77, 42, 0.25)'
-          }}>
-            <Flame size={36} strokeWidth={2.5} />
-          </div>
-          <h1 className="title-large" style={{ fontSize: '32px', letterSpacing: '-0.03em', color: 'var(--text-1)', marginBottom: '4px' }}>
-            SwiftTable
-          </h1>
-          <p style={{ fontSize: '14px', color: 'var(--text-3)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Sistema de Mesa Virtual
-          </p>
+  // ── Render: Panel Staff (modal/overlay compacto) ───────────────────────────
+  if (mostrarPanelStaff) {
+    return (
+      <>
+        <div className="native-app-bar" style={{ background: 'transparent', border: 'none' }}>
+          <div className="left-action" />
+          <div className="title" style={{ color: 'var(--text-1)' }} />
+          <div className="right-action" />
         </div>
 
-        {rolSeleccionado === null ? (
-          <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            
-            {/* Opción Cliente (Informativa, exige QR) */}
-            <div 
-              className="card animate-pop" 
-              onClick={() => setRolSeleccionado('cliente')}
-              style={{ 
-                padding: '24px', 
-                borderRadius: '20px', 
-                background: 'var(--surface)', 
-                border: '1.5px solid var(--border)',
-                cursor: 'pointer',
-                textAlign: 'center',
-                boxShadow: 'var(--shadow-sm)',
-                transition: 'all 0.2s'
-              }}
-            >
-              <div style={{ 
-                width: '48px', height: '48px', borderRadius: '14px', 
-                background: 'var(--accent-bg)', color: 'var(--accent)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto 16px'
-              }}>
-                <QrCode size={24} />
-              </div>
-              <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-1)', marginBottom: '6px' }}>
-                Acceso para Clientes
-              </h3>
-              <p style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: 1.5 }}>
-                Para empezar a pedir platos, llama al mozo y ver tu cuenta, **por favor escanea el código QR impreso en tu mesa física**.
-              </p>
-            </div>
+        <div className="content-wrapper flex-col" style={{ padding: '0 24px 32px', justifyContent: 'center' }}>
 
-            {/* Opción Personal */}
-            <div 
-              className="card animate-pop" 
-              onClick={() => setRolSeleccionado('staff')}
-              style={{ 
-                padding: '24px', 
-                borderRadius: '20px', 
-                background: 'var(--surface)', 
-                border: '1.5px solid var(--border)',
-                cursor: 'pointer',
-                textAlign: 'center',
-                boxShadow: 'var(--shadow-sm)',
-                transition: 'all 0.2s'
-              }}
-            >
-              <div style={{ 
-                width: '48px', height: '48px', borderRadius: '14px', 
-                background: 'var(--blue-bg)', color: 'var(--blue)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto 16px'
-              }}>
-                <Shield size={24} />
-              </div>
-              <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-1)', marginBottom: '6px' }}>
-                Soy Personal del Restaurante
-              </h3>
-              <p style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: 1.4 }}>
-                Acceso KDS para cocina, alertas activas para salón y cobros/boletas en caja registradora.
-              </p>
+          {/* Logo pequeño */}
+          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+            <div style={{
+              width: '60px', height: '60px', borderRadius: '18px',
+              background: 'linear-gradient(135deg, var(--blue, #3b82f6), #6366f1)',
+              color: 'white',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 14px',
+              boxShadow: '0 10px 20px rgba(59, 130, 246, 0.25)'
+            }}>
+              <Shield size={28} strokeWidth={2.5} />
             </div>
-
-          </div>
-        ) : rolSeleccionado === 'staff' ? (
-          /* Formulario Staff / Ingreso de PIN */
-          <form onSubmit={handleEntrarComoPersonal} className="card animate-pop" style={{ padding: '24px', borderRadius: '20px', background: 'var(--surface)', border: '1.5px solid var(--border)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--blue)', textTransform: 'uppercase' }}>
-                Acceso Personal
-              </span>
-              <button 
-                type="button" 
-                onClick={() => { setRolSeleccionado(null); setPinPersonal(''); }}
-                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-3)' }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <h3 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-1)', marginBottom: '12px' }}>
-              Ingresa PIN de Seguridad
-            </h3>
-            <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '20px', lineHeight: '1.4' }}>
-              Introduce el PIN de empleado asignado para acceder a los módulos de cocina, meseros y cobros.
+            <h1 style={{ fontSize: '22px', fontWeight: '800', color: 'var(--text-1)', marginBottom: '4px' }}>
+              Acceso Personal
+            </h1>
+            <p style={{ fontSize: '13px', color: 'var(--text-3)', fontWeight: '500' }}>
+              Ingresa tu PIN de empleado
             </p>
+          </div>
 
-            <div style={{ marginBottom: '24px', position: 'relative' }}>
+          {/* Formulario */}
+          <form onSubmit={handleEntrarComoPersonal} className="card" style={{
+            padding: '24px', borderRadius: '20px',
+            background: 'var(--surface)', border: '1.5px solid var(--border)'
+          }}>
+            <div style={{ marginBottom: '20px', position: 'relative' }}>
               <input
                 type="password"
                 maxLength={4}
                 placeholder="••••"
                 value={pinPersonal}
+                autoFocus
                 onChange={(e) => setPinPersonal(e.target.value.replace(/\D/g, ''))}
                 style={{
                   width: '100%',
-                  padding: '16px',
-                  letterSpacing: '12px',
+                  padding: '18px',
+                  letterSpacing: '14px',
                   textAlign: 'center',
-                  borderRadius: '12px',
-                  background: intentosError ? 'var(--red-bg)' : 'var(--bg)',
-                  border: intentosError ? '1.5px solid var(--red)' : '1.5px solid var(--border)',
+                  borderRadius: '14px',
+                  background: staffError ? 'var(--red-bg, #fef2f2)' : 'var(--bg)',
+                  border: staffError
+                    ? '2px solid var(--red, #ef4444)'
+                    : '2px solid var(--border)',
                   color: 'var(--text-1)',
-                  fontSize: '24px',
+                  fontSize: '26px',
                   fontWeight: '800',
                   outline: 'none',
                   fontFamily: 'inherit',
-                  transition: 'all 0.15s'
+                  transition: 'border-color 0.15s, background 0.15s',
+                  boxSizing: 'border-box'
                 }}
               />
-              <span style={{ fontSize: '10px', color: 'var(--text-3)', display: 'block', textAlign: 'center', marginTop: '8px' }}>
-                PIN Demo: 4321 o 1234
+              {staffError && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px', color: 'var(--red, #ef4444)', fontSize: '13px', fontWeight: '600' }}>
+                  <AlertCircle size={14} /> PIN incorrecto
+                </div>
+              )}
+              <span style={{ fontSize: '11px', color: 'var(--text-3)', display: 'block', textAlign: 'center', marginTop: '6px' }}>
+                Demo: 1234 (La Fogata) · 4321 (Pizzería Italia)
               </span>
             </div>
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="wf-btn-solid"
-              style={{ width: '100%', padding: '14px', fontSize: '15px', borderRadius: '12px', margin: 0, background: 'var(--blue)', boxShadow: 'none' }}
+              style={{ width: '100%', padding: '14px', fontSize: '15px', borderRadius: '12px', margin: 0, background: 'var(--blue, #3b82f6)', boxShadow: 'none' }}
             >
-              Ingresar a Logística
+              Ingresar al Panel
             </button>
           </form>
-        ) : (
-          /* Formulario Cliente / Selección de Mesa */
-          <form onSubmit={handleEntrarComoCliente} className="card animate-pop" style={{ padding: '24px', borderRadius: '20px', background: 'var(--surface)', border: '1.5px solid var(--border)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--accent)', textTransform: 'uppercase' }}>
-                Acceso Cliente (Simulador)
-              </span>
-              <button 
-                type="button" 
-                onClick={() => { setRolSeleccionado(null); setMesaElegida(''); }}
-                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-3)' }}
-              >
-                <X size={20} />
-              </button>
-            </div>
 
-            <h3 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-1)', marginBottom: '12px' }}>
-              Selecciona una Mesa
-            </h3>
-            <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '20px', lineHeight: '1.4' }}>
-              Elige la mesa a la que deseas acceder para simular la experiencia del comensal.
-            </p>
+          {/* Volver */}
+          <button
+            onClick={() => { setMostrarPanelStaff(false); setPinPersonal('') }}
+            style={{
+              marginTop: '20px', background: 'transparent', border: 'none',
+              color: 'var(--text-3)', fontSize: '14px', cursor: 'pointer',
+              fontWeight: '600', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', gap: '6px'
+            }}
+          >
+            <X size={16} /> Cancelar
+          </button>
+        </div>
+      </>
+    )
+  }
 
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: '700', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
-                Mesa
-              </label>
-              <select
-                value={mesaElegida}
-                onChange={(e) => setMesaElegida(e.target.value)}
+  // ── Render principal: PIN de mesa ─────────────────────────────────────────
+  return (
+    <>
+      <div className="native-app-bar" style={{ background: 'transparent', border: 'none', backdropFilter: 'none' }}>
+        <div className="left-action" />
+        <div className="title" style={{ color: 'var(--text-1)' }} />
+        <div className="right-action" />
+      </div>
+
+      <div className="content-wrapper flex-col" style={{ padding: '0 24px 32px', marginTop: '-12px' }}>
+
+        {/* Logo + Marca */}
+        <div style={{ textAlign: 'center', marginBottom: '28px', marginTop: '8px' }}>
+          <div style={{
+            width: '68px', height: '68px', borderRadius: '20px',
+            background: 'linear-gradient(135deg, var(--accent), var(--accent-2))',
+            color: 'white',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 14px',
+            boxShadow: '0 10px 22px rgba(225, 77, 42, 0.28)'
+          }}>
+            <Flame size={34} strokeWidth={2.5} />
+          </div>
+          <h1 style={{ fontSize: '30px', letterSpacing: '-0.03em', color: 'var(--text-1)', fontWeight: '800', marginBottom: '2px' }}>
+            SwiftTable
+          </h1>
+          <p style={{ fontSize: '12px', color: 'var(--text-3)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            Sistema de Mesa Virtual
+          </p>
+        </div>
+
+        {/* Bloque PIN */}
+        <div className="card animate-fade-in" style={{
+          padding: '28px 20px',
+          borderRadius: '24px',
+          background: 'var(--surface)',
+          border: '1.5px solid var(--border)',
+          boxShadow: '0 16px 40px -12px rgba(0,0,0,0.06)',
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center'
+        }}>
+          <p style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>
+            Ingresa el PIN de tu mesa
+          </p>
+          <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '24px', textAlign: 'center', lineHeight: 1.5 }}>
+            Encuéntralo en el centro o al costado de la mesa.
+          </p>
+
+          {/* Dots de PIN */}
+          <div style={{ display: 'flex', gap: '16px', marginBottom: '28px' }}>
+            {[0, 1, 2, 3].map(i => (
+              <div
+                key={i}
                 style={{
-                  width: '100%',
-                  padding: '14px',
-                  borderRadius: '12px',
-                  background: 'var(--bg)',
+                  width: '18px', height: '18px',
+                  borderRadius: '50%',
+                  transition: 'all 0.15s ease',
+                  background: pinError
+                    ? 'var(--red, #ef4444)'
+                    : i < pin.length
+                      ? 'var(--accent)'
+                      : 'var(--border)',
+                  transform: i < pin.length ? 'scale(1.15)' : 'scale(1)',
+                  boxShadow: i < pin.length && !pinError
+                    ? '0 0 0 4px rgba(225,77,42,0.15)'
+                    : 'none'
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Teclado numérico */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '10px',
+            width: '100%',
+            maxWidth: '260px'
+          }}>
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+              <button
+                key={num}
+                onClick={() => pin.length < 4 && handlePadClick(num.toString())}
+                disabled={buscando || pin.length >= 4}
+                style={{
+                  padding: '18px 0',
+                  borderRadius: '14px',
                   border: '1.5px solid var(--border)',
+                  background: 'var(--bg)',
                   color: 'var(--text-1)',
-                  fontSize: '15px',
-                  fontWeight: '600',
-                  outline: 'none',
-                  fontFamily: 'inherit',
-                  cursor: 'pointer'
-                }}
-              >
-                <option value="">-- Seleccionar Mesa --</option>
-                {mesasDisponibles.map(m => (
-                  <option key={m.id_mesa} value={m.id_mesa}>
-                    Mesa {m.numero}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <button 
-                type="submit" 
-                className="wf-btn-solid"
-                style={{ width: '100%', padding: '14px', fontSize: '15px', borderRadius: '12px', margin: 0, background: 'var(--accent)', boxShadow: 'none' }}
-              >
-                Acceder a la Mesa (Con PIN)
-              </button>
-
-              <button 
-                type="button" 
-                onClick={handleEntrarComoClienteConToken}
-                className="wf-btn-outline"
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  fontSize: '15px',
-                  borderRadius: '12px',
-                  margin: 0,
-                  border: '1px solid var(--border-2)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  boxShadow: 'none',
+                  fontSize: '22px',
                   fontWeight: '700',
-                  cursor: 'pointer'
+                  cursor: buscando || pin.length >= 4 ? 'not-allowed' : 'pointer',
+                  fontFamily: 'inherit',
+                  transition: 'all 0.1s ease',
+                  opacity: buscando ? 0.5 : 1,
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
                 }}
+                onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.94)'; e.currentTarget.style.background = 'var(--surface-2)' }}
+                onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'var(--bg)' }}
+                onTouchStart={e => { e.currentTarget.style.transform = 'scale(0.94)'; e.currentTarget.style.background = 'var(--surface-2)' }}
+                onTouchEnd={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'var(--bg)' }}
               >
-                <QrCode size={16} /> Simular Escaneo QR (Sin PIN)
+                {num}
               </button>
+            ))}
+
+            {/* Fila inferior: vacío | 0 | borrar */}
+            <div />
+            <button
+              onClick={() => pin.length < 4 && handlePadClick('0')}
+              disabled={buscando || pin.length >= 4}
+              style={{
+                padding: '18px 0',
+                borderRadius: '14px',
+                border: '1.5px solid var(--border)',
+                background: 'var(--bg)',
+                color: 'var(--text-1)',
+                fontSize: '22px',
+                fontWeight: '700',
+                cursor: buscando || pin.length >= 4 ? 'not-allowed' : 'pointer',
+                fontFamily: 'inherit',
+                transition: 'all 0.1s ease',
+                opacity: buscando ? 0.5 : 1,
+                boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
+              }}
+              onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.94)'; e.currentTarget.style.background = 'var(--surface-2)' }}
+              onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'var(--bg)' }}
+              onTouchStart={e => { e.currentTarget.style.transform = 'scale(0.94)'; e.currentTarget.style.background = 'var(--surface-2)' }}
+              onTouchEnd={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'var(--bg)' }}
+            >
+              0
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={buscando || pin.length === 0}
+              style={{
+                padding: '18px 0',
+                borderRadius: '14px',
+                border: '1.5px solid var(--border)',
+                background: 'var(--surface-2)',
+                color: 'var(--text-2)',
+                fontSize: '18px',
+                cursor: buscando || pin.length === 0 ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                opacity: buscando || pin.length === 0 ? 0.4 : 1,
+                transition: 'all 0.1s ease',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
+              }}
+            >
+              <Delete size={20} />
+            </button>
+          </div>
+
+          {/* Spinner mientras busca */}
+          {buscando && (
+            <div style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-3)', fontSize: '13px', fontWeight: '600' }}>
+              <div style={{
+                width: '16px', height: '16px',
+                border: '2px solid var(--border)',
+                borderTop: '2px solid var(--accent)',
+                borderRadius: '50%',
+                animation: 'spin 0.8s linear infinite'
+              }} />
+              Buscando mesa...
+              <style>{`@keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }`}</style>
             </div>
-          </form>
-        )}
+          )}
+        </div>
+
+        {/* Separador + Enlace de Personal — discreto pero visible */}
+        <div style={{ marginTop: '24px', textAlign: 'center' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '10px',
+            color: 'var(--text-3)', fontSize: '12px', marginBottom: '16px'
+          }}>
+            <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+            <span style={{ fontWeight: '600', letterSpacing: '0.03em' }}>o</span>
+            <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+          </div>
+
+          <button
+            onClick={() => { setMostrarPanelStaff(true); setPin('') }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '7px',
+              color: 'var(--text-2)',
+              fontSize: '14px',
+              fontWeight: '700',
+              fontFamily: 'inherit',
+              padding: '8px 16px',
+              borderRadius: '10px',
+              transition: 'color 0.15s, background 0.15s'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.color = 'var(--text-1)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-2)' }}
+          >
+            <Shield size={16} strokeWidth={2} />
+            Soy Personal del Restaurante
+          </button>
+        </div>
 
       </div>
     </>
