@@ -22,6 +22,7 @@ class MesaResponse(BaseModel):
     tipo_pago: Optional[str] = None
     codigo_qr: Optional[str] = None
     token_sesion: Optional[str] = None
+    tiempo_espera_adicional: int = 0
     restaurante: Optional[RestauranteMini] = None
     comensales: Optional[List[ComensalResponse]] = None
 
@@ -30,6 +31,9 @@ class MesaResponse(BaseModel):
 
 class MesaConfigUpdate(BaseModel):
     tipo_pago: str
+
+class MesaTiempoUpdate(BaseModel):
+    minutos: int
 
 class MesaCreateResponse(MesaResponse):
     # Este sí incluye el pin: solo se devuelve una vez, justo al crear la

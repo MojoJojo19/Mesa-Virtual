@@ -130,7 +130,6 @@ export default function Menu() {
   }
 
   const handleConfirmar = async () => {
-    if (carrito.length === 0) return
     localStorage.setItem('swifttable_carrito', JSON.stringify(carrito))
     if (idComensalLocal) {
       await actualizarCarritoComensal(idComensalLocal, 'listo', carrito).catch(() => {})
@@ -238,17 +237,23 @@ export default function Menu() {
         )}
       </div>
 
-      {totalItems > 0 && (
-        <div className="native-bottom-bar" style={{ display: 'flex', gap: '16px', padding: '16px' }}>
-          <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: '12px', color: 'var(--text-2)', fontWeight: '500' }}>{totalItems} items</span>
-            <span style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-1)' }}>S/ {totalMonto.toFixed(2)}</span>
-          </div>
-          <button className="wf-btn-solid" style={{ flex: 1, padding: '16px' }} onClick={handleConfirmar}>
-            Revisar Pedido
+      <div className="native-bottom-bar" style={{ display: 'flex', gap: '16px', padding: '16px' }}>
+        {totalItems > 0 ? (
+          <>
+            <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-2)', fontWeight: '500' }}>{totalItems} items</span>
+              <span style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-1)' }}>S/ {totalMonto.toFixed(2)}</span>
+            </div>
+            <button className="wf-btn-solid" style={{ flex: 1, padding: '16px' }} onClick={handleConfirmar}>
+              Revisar Pedido
+            </button>
+          </>
+        ) : (
+          <button className="wf-btn-outline" style={{ width: '100%', padding: '16px', fontWeight: '600' }} onClick={handleConfirmar}>
+            No pediré nada (Estoy listo)
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {showBellMenu && (
         <div style={{

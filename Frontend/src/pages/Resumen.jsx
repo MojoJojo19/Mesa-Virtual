@@ -21,10 +21,16 @@ export default function Resumen() {
   const [solicitando, setSolicitando] = useState(false)
   const [pagando, setPagando] = useState(false)
   const [comensales, setComensales] = useState([])
+  const [tipoPago, setTipoPago] = useState('no_decidido')
 
   React.useEffect(() => {
-    const fetchComensales = async () => {
+    const fetchDatos = async () => {
       try {
+        const mesaInfo = await getMesa(idMesa)
+        if (mesaInfo && mesaInfo.tipo_pago) {
+          setTipoPago(mesaInfo.tipo_pago)
+        }
+        
         const data = await getComensalesDeMesa(idMesa)
         const activos = (data || []).filter(c => c.estado_sesion === 'activa')
         setComensales(activos)
@@ -32,7 +38,7 @@ export default function Resumen() {
         console.error(err)
       }
     }
-    fetchComensales()
+    fetchDatos()
   }, [idMesa])
 
   const handlePedirCuenta = async () => {
@@ -58,11 +64,12 @@ export default function Resumen() {
     return sum + cart.reduce((s, i) => s + (Number(i.precio || 0) * (i.cantidad || 1)), 0)
   }, 0)
 
-  const subtotal = (isLider && user.modoPago === 'lider')
-    ? totalMesa || miTotal // fallback a miTotal si totalMesa es 0 (ej. cargando)
-    : miTotal
+  // Si la mesa configuró "junto", el líder paga el total de todos. Si no, cada uno paga lo suyo.
+  const pagandoJunto = isLider && tipoPago === 'junto'
+  
+  const subtotal = pagandoJunto ? (totalMesa || miTotal) : miTotal
 
-  const servicio = subtotal * 0.10
+  const servicio = 0
   const pctPropina = propinaIdx === 0 ? 0 : propinaIdx === 1 ? 0.05 : propinaIdx === 2 ? 0.10 : 0
   const propinaMonto = propinaIdx === 3 ? (Number(propinaOtros) || 0) : (subtotal * pctPropina)
   const totalFinal = subtotal + servicio + propinaMonto
@@ -130,22 +137,51 @@ export default function Resumen() {
           </div>
         </div>
 
-        {/* Desglose */}
-        <div className="card" style={{ padding: '16px 20px', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '15px' }}>
-            <span style={{ color: 'var(--text-2)' }}>Subtotal</span>
-            <span>S/ {subtotal.toFixed(2)}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '15px' }}>
-            <span style={{ color: 'var(--text-2)' }}>Servicio (10%)</span>
-            <span>S/ {servicio.toFixed(2)}</span>
-          </div>
-          {propinaMonto > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '15px' }}>
-              <span style={{ color: 'var(--text-2)' }}>Propina {propinaIdx === 3 ? '(Otros)' : `(${(pctPropina * 100).toFixed(0)}%)`}</span>
-              <span>S/ {propinaMonto.toFixed(2)}</span>
+        {/* Desglose de Platos */}
+        <div className="card" style={{ padding: '16px 20px', marginBottom: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <h3 style={{ fontSize: '15px', fontWeight: '800', margin: 0, color: 'var(--text-1)', paddingBottom: '12px', borderBottom: '1px solid var(--border)' }}>Resumen del Pedido</h3>
+          
+          {pagandoJunto ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {comensales.filter(c => Array.isArray(c.carrito) && c.carrito.length > 0).map(c => (
+                <div key={c.id_comensal}>
+                  <div style={{ fontWeight: '700', fontSize: '14px', marginBottom: '8px', color: 'var(--text-1)' }}>{c.nombre} {c.id_comensal === user.id && '(Tú)'}</div>
+                  {c.carrito.map((item, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: 'var(--text-2)', marginBottom: '4px' }}>
+                      <span>{item.cantidad}x {item.nombre}</span>
+                      <span>S/ {(Number(item.precio || 0) * item.cantidad).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {miCarrito.length > 0 ? miCarrito.map((item, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: 'var(--text-2)' }}>
+                  <span>{item.cantidad}x {item.nombre}</span>
+                  <span>S/ {(Number(item.precio || 0) * item.cantidad).toFixed(2)}</span>
+                </div>
+              )) : (
+                <div style={{ fontSize: '14px', color: 'var(--text-3)' }}>No hay productos en tu cuenta.</div>
+              )}
             </div>
           )}
+
+          <div style={{ height: '1px', background: 'var(--border)', margin: '4px 0' }} />
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px' }}>
+              <span style={{ color: 'var(--text-1)', fontWeight: '600' }}>Subtotal</span>
+              <span style={{ fontWeight: '600' }}>S/ {subtotal.toFixed(2)}</span>
+            </div>
+            {propinaMonto > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', color: 'var(--accent)' }}>
+                <span>Propina {propinaIdx === 3 ? '(Otros)' : `(${(pctPropina * 100).toFixed(0)}%)`}</span>
+                <span>S/ {propinaMonto.toFixed(2)}</span>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="section-label">Propina sugerida</div>
@@ -214,14 +250,6 @@ export default function Resumen() {
       </div>
 
       <div className="native-bottom-bar" style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '16px' }}>
-        <button
-          className="wf-btn-outline"
-          style={{ width: '100%', padding: '16px', fontSize: '16px' }}
-          onClick={handlePedirCuenta}
-          disabled={solicitando}
-        >
-          {solicitando ? 'Enviando...' : 'Pedir Cuenta al Mozo'}
-        </button>
         <button
           className="wf-btn-solid"
           style={{ width: '100%', padding: '16px', margin: 0, fontSize: '16px' }}

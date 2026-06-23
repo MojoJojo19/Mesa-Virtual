@@ -62,6 +62,9 @@ const fetchWithTimeout = async (url, options = {}) => {
     };
   }
 
+  // Desactivar caché del navegador para todas las llamadas API
+  rest.cache = 'no-store';
+
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
   const response = await fetch(url, { ...rest, signal: controller.signal });
@@ -106,6 +109,20 @@ export const getMesa = async (idMesa) => {
     return await res.json()
   } catch {
     return { ...MOCK_MESA, id_mesa: idMesa }
+  }
+}
+
+export const actualizarTiempoEsperaMesa = async (idMesa, minutos) => {
+  try {
+    const res = await fetchWithTimeout(`${API_URL}/mesas/${idMesa}/tiempo-espera`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ minutos: parseInt(minutos) })
+    })
+    if (!res.ok) throw new Error('Error al actualizar tiempo de espera de mesa')
+    return await res.json()
+  } catch (e) {
+    throw e
   }
 }
 
@@ -546,26 +563,29 @@ export const getPedidosDeMesa = async (idMesa) => {
     if (!res.ok) throw new Error('Error');
     const pedidos = await res.json();
     
+    // Fetch platos ONCE to avoid N+1 requests
+    const platosList = await fetchWithTimeout(`${API_URL}/productos/`).then(r => r.ok ? r.json() : []).catch(() => []);
+
     const pedidosConDetalles = await Promise.all(pedidos.map(async (ped) => {
       try {
         const dRes = await fetchWithTimeout(`${API_URL}/detalles_pedido/pedido/${ped.id_pedido}`);
         if (dRes.ok) {
           const detalles = await dRes.json();
-          const platosList = await fetchWithTimeout(`${API_URL}/productos/`).then(r => r.ok ? r.json() : []);
           const items = detalles.map(d => {
             const prod = platosList.find(p => p.id_producto === d.id_producto);
             return {
               nombre: prod ? prod.nombre : `Producto #${d.id_producto}`,
               cantidad: d.cantidad,
-              precio: d.precio_unitario
+              precio: d.precio_unitario,
+              id_producto: d.id_producto
             };
           });
           return { ...ped, items };
         }
-      } catch (e) {
-        console.error(e);
+        return { ...ped, items: [] };
+      } catch {
+        return { ...ped, items: [] };
       }
-      return { ...ped, items: [] };
     }));
 
     // Retornar solo pedidos ACTIVOS (no pagados ni cancelados) para logística
@@ -605,26 +625,30 @@ export const getPedidosTodos = async (idRestaurante = null) => {
     if (!res.ok) throw new Error('Error');
     const pedidos = await res.json();
     
+    // Fetch platos ONCE to avoid N+1 requests
+    const platosList = await fetchWithTimeout(`${API_URL}/productos/`).then(r => r.ok ? r.json() : []).catch(() => []);
+
     const pedidosConDetalles = await Promise.all(pedidos.map(async (ped) => {
       try {
         const dRes = await fetchWithTimeout(`${API_URL}/detalles_pedido/pedido/${ped.id_pedido}`);
         if (dRes.ok) {
           const detalles = await dRes.json();
-          const platosList = await fetchWithTimeout(`${API_URL}/productos/`).then(r => r.ok ? r.json() : []);
           const items = detalles.map(d => {
             const prod = platosList.find(p => p.id_producto === d.id_producto);
             return {
               nombre: prod ? prod.nombre : `Producto #${d.id_producto}`,
               cantidad: d.cantidad,
-              precio: d.precio_unitario
+              precio: d.precio_unitario,
+              id_producto: d.id_producto
             };
           });
           return { ...ped, items };
         }
+        return { ...ped, items: [] };
       } catch (e) {
         console.error(e);
+        return { ...ped, items: [] };
       }
-      return { ...ped, items: [] };
     }));
     return pedidosConDetalles;
   } catch {

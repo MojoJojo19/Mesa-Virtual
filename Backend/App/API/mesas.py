@@ -11,7 +11,7 @@ from App.Models.comensal import Comensal
 from App.Schemas.mesa import (
     MesaCreate, MesaResponse, MesaCreateResponse,
     ValidarPinRequest, ValidarPinResponse, MesaEstadoUpdate,
-    BuscarPorPinRequest, BuscarPorPinResponse, MesaConfigUpdate
+    BuscarPorPinRequest, BuscarPorPinResponse, MesaConfigUpdate, MesaTiempoUpdate
 )
 from App.Schemas.comensal import ComensalResponse
 from App.Utils.qr_generator import generar_qr_mesa
@@ -74,6 +74,15 @@ def actualizar_config_mesa(id_mesa: int, datos: MesaConfigUpdate, db: Session = 
     db.refresh(mesa)
     return mesa
 
+@router.put("/{id_mesa}/tiempo-espera", response_model=MesaResponse)
+def actualizar_tiempo_espera_mesa(id_mesa: int, datos: MesaTiempoUpdate, db: Session = Depends(get_db)):
+    mesa = db.query(Mesa).filter(Mesa.id_mesa == id_mesa).first()
+    if not mesa:
+        raise HTTPException(status_code=404, detail="Mesa no encontrada")
+    mesa.tiempo_espera_adicional = datos.minutos
+    db.commit()
+    db.refresh(mesa)
+    return mesa
 
 @router.post("/{id_mesa}/validar-pin", response_model=ValidarPinResponse)
 def validar_pin(id_mesa: int, datos: ValidarPinRequest, db: Session = Depends(get_db)):
@@ -170,8 +179,9 @@ def liberar_mesa(id_mesa: int, db: Session = Depends(get_db)):
     if not mesa:
         raise HTTPException(status_code=404, detail="Mesa no encontrada")
     
-    # 1. Cambiar estado a libre
+    # 1. Cambiar estado a libre y resetear configuración
     mesa.estado = EstadoMesa.libre
+    mesa.tipo_pago = 'no_decidido'
     # NOTA: Ya NO generamos un nuevo PIN ni token de sesión para que el QR sea estático
     
     # 3. Eliminar los comensales asociados a esta mesa (limpiar la sesión)

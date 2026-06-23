@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Bell, FileText, ChevronLeft, RefreshCw, CheckCircle, Clock, Plus, Volume2, VolumeX, X, User, Utensils, LayoutGrid, ChefHat, ConciergeBell, Receipt, DollarSign, QrCode, Minus } from 'lucide-react'
-import { getAsistencias, atenderAsistencia, simularLlamadoDesdePanel, getMesas, liberarMesa, getPedidosDeMesa, registrarPago, actualizarEstadoPedido, getPagos, getPedidosTodos, getRestaurante, actualizarTiempoEspera, API_URL } from '../services/api'
+import { getAsistencias, atenderAsistencia, simularLlamadoDesdePanel, getMesas, liberarMesa, getPedidosDeMesa, registrarPago, actualizarEstadoPedido, getPagos, getPedidosTodos, getRestaurante, actualizarTiempoEspera, actualizarTiempoEsperaMesa, API_URL } from '../services/api'
 import { useToast } from '../components/Toast'
 
 export default function Logistica() {
@@ -30,6 +30,7 @@ export default function Logistica() {
   const [tiempoEsperaGlobal, setTiempoEsperaGlobal] = useState(15)
 
   const asistenciasPrevias = useRef(new Set())
+  const timeoutExtraTimeRefs = useRef({})
 
   // Sintetizador Web Audio para un sonido limpio y compatible sin requerir archivos externos
   const reproducirSonidoAlerta = () => {
@@ -103,12 +104,11 @@ export default function Logistica() {
       }
 
       // Actualizar mesa seleccionada si ya hay una abierta
-      if (mesaSeleccionada) {
-        const actualizada = (datosMesas || []).find(m => m.id_mesa === mesaSeleccionada.id_mesa)
-        if (actualizada) {
-          setMesaSeleccionada(actualizada)
-        }
-      }
+      setMesaSeleccionada(prev => {
+        if (!prev) return null;
+        const actualizada = (datosMesas || []).find(m => m.id_mesa === prev.id_mesa);
+        return actualizada || null;
+      });
 
       if (mostrarToast) {
         toast('Datos actualizados', 'success')
@@ -138,22 +138,15 @@ export default function Logistica() {
     }
   }, [])
 
-  // Cargar pedidos al cambiar selección
+  // Cargar pedidos al cambiar selección o cuando se actualizan todosPedidos
   useEffect(() => {
     if (mesaSeleccionada) {
-      const fetchPedidos = async () => {
-        try {
-          const peds = await getPedidosDeMesa(mesaSeleccionada.id_mesa)
-          setPedidosMesa(peds || [])
-        } catch (e) {
-          console.error(e)
-        }
-      }
-      fetchPedidos()
+      const peds = todosPedidos.filter(p => p.id_mesa === mesaSeleccionada.id_mesa && p.estado !== 'pagado' && p.estado !== 'cancelado');
+      setPedidosMesa(peds);
     } else {
-      setPedidosMesa([])
+      setPedidosMesa([]);
     }
-  }, [mesaSeleccionada?.id_mesa, tick])
+  }, [mesaSeleccionada, todosPedidos])
 
   // Acción para atender llamado
   const handleAtender = async (id) => {
@@ -179,7 +172,7 @@ export default function Logistica() {
     setConfirmModalOpen(false)
     try {
       const mesaLiberada = await liberarMesa(mesaALiberar)
-      toast(`Mesa ${mesaALiberar} liberada. PIN reiniciado.`, 'success')
+      toast(`Mesa ${mesaALiberar} liberada.`, 'success')
       
       // Actualizar listado local de mesas
       setMesas(prev => prev.map(m => m.id_mesa === mesaALiberar ? mesaLiberada : m))
@@ -214,14 +207,29 @@ export default function Logistica() {
     }
   }
 
+  const handleActualizarTiempoEsperaMesa = (idMesa, nuevoTiempoExtra) => {
+    // Actualización optimista para que la UI responda instantáneamente
+    setMesas(prev => prev.map(m => m.id_mesa === idMesa ? { ...m, tiempo_espera_adicional: nuevoTiempoExtra } : m));
+    
+    if (timeoutExtraTimeRefs.current[idMesa]) {
+      clearTimeout(timeoutExtraTimeRefs.current[idMesa]);
+    }
+
+    timeoutExtraTimeRefs.current[idMesa] = setTimeout(async () => {
+      try {
+        await actualizarTiempoEsperaMesa(idMesa, nuevoTiempoExtra)
+        toast(`Tiempo extra actualizado a ${nuevoTiempoExtra} min para la Mesa ${idMesa}`, 'success')
+      } catch (e) {
+        toast('Error al actualizar tiempo extra de la mesa', 'error')
+        cargarDatos() // Revertir en caso de error
+      }
+    }, 500);
+  }
+
   const cambiarEstadoPedidoClick = async (idPedido, nuevoEstado) => {
     try {
       await actualizarEstadoPedido(idPedido, nuevoEstado)
       toast(`Pedido actualizado a: ${nuevoEstado === 'listo_para_servir' ? 'Listo' : 'Servido'}`, 'success')
-      if (mesaSeleccionada) {
-        const peds = await getPedidosDeMesa(mesaSeleccionada.id_mesa)
-        setPedidosMesa(peds || [])
-      }
       cargarDatos()
     } catch (e) {
       toast('Error al actualizar estado del pedido', 'error')
@@ -511,6 +519,34 @@ export default function Logistica() {
                     </div>
                   ))}
                 </div>
+
+                {/* Control de Tiempo Extra por Mesa */}
+                {(() => {
+                  const mesaInfo = mesas.find(m => m.id_mesa === com.id_mesa)
+                  const extraTime = mesaInfo ? (mesaInfo.tiempo_espera_adicional || 0) : 0
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', background: 'var(--surface-2)', padding: '8px 12px', borderRadius: '8px' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-2)' }}>Tiempo Extra:</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <button 
+                          onClick={() => handleActualizarTiempoEsperaMesa(com.id_mesa, extraTime - 5)}
+                          style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <Minus size={12} />
+                        </button>
+                        <span style={{ fontSize: '13px', fontWeight: 'bold', minWidth: '40px', textAlign: 'center' }}>
+                          {extraTime > 0 ? `+${extraTime}` : extraTime} min
+                        </span>
+                        <button 
+                          onClick={() => handleActualizarTiempoEsperaMesa(com.id_mesa, extraTime + 5)}
+                          style={{ width: '24px', height: '24px', borderRadius: '50%', border: 'none', background: 'var(--accent)', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <Plus size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })()}
 
                 <button
                   onClick={() => cambiarEstadoPedidoClick(com.id_pedido, 'listo_para_servir')}
@@ -1284,7 +1320,7 @@ export default function Logistica() {
                             margin: 0
                           }}
                         >
-                          Cerrar Cuenta y Liberar Mesa (Reiniciar PIN)
+                          Cerrar Cuenta y Liberar Mesa
                         </button>
                       )}
                     </div>
@@ -1496,7 +1532,7 @@ export default function Logistica() {
               Confirmar Liberación
             </h3>
             <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: '1.5', marginBottom: '24px' }}>
-              ¿Estás seguro de que deseas cerrar la sesión y liberar la <strong>Mesa {mesaALiberar}</strong>? Esto borrará los comensales actuales y generará un PIN nuevo.
+              ¿Estás seguro de que deseas cerrar la sesión y liberar la <strong>Mesa {mesaALiberar}</strong>? Esto borrará los comensales actuales.
             </p>
             <div style={{ display: 'flex', gap: '12px' }}>
               <button 

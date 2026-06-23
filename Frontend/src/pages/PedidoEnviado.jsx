@@ -104,7 +104,8 @@ export default function PedidoEnviado() {
       // Calcular tiempo dinámico (Opción B)
       if (mesaInfo && mesaInfo.restaurante && mesaInfo.restaurante.tiempo_espera_global) {
         const globalTime = mesaInfo.restaurante.tiempo_espera_global
-        setTiempoEsperaGlobal(globalTime)
+        const extraTime = mesaInfo.tiempo_espera_adicional || 0
+        setTiempoEsperaGlobal(globalTime + extraTime)
         
         if (peds && peds.length > 0) {
           // Tomar el pedido más antiguo que esté en preparación
@@ -113,7 +114,8 @@ export default function PedidoEnviado() {
             const oldest = pedsActivos.sort((a, b) => new Date(a.fecha_hora) - new Date(b.fecha_hora))[0]
             const msTranscurridos = Date.now() - new Date(oldest.fecha_hora).getTime()
             const minsTranscurridos = Math.floor(msTranscurridos / 60000)
-            const tiempoRestante = Math.max(0, globalTime - minsTranscurridos)
+            const baseRestante = Math.max(0, globalTime - minsTranscurridos)
+            const tiempoRestante = Math.max(0, baseRestante + extraTime)
             setMinutos(tiempoRestante)
           } else {
             setMinutos(0) // Todos listos
@@ -249,7 +251,9 @@ export default function PedidoEnviado() {
             <div style={{ display: 'flex', justifyContent: 'center', marginTop: '24px' }}>
               <div style={{ background: 'var(--surface)', padding: '10px 20px', borderRadius: 'var(--r-full)', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: 'var(--shadow-sm)' }}>
                 <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-2)', textTransform: 'uppercase' }}>Tiempo estimado</span>
-                <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--accent)' }}>{minutos} min</span>
+                <span style={{ fontSize: '18px', fontWeight: '800', color: minutos > 0 ? 'var(--accent)' : 'var(--orange)' }}>
+                  {minutos > 0 ? `${minutos} min` : 'Por salir'}
+                </span>
               </div>
             </div>
           </div>

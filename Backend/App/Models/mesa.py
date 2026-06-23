@@ -21,6 +21,7 @@ class Mesa(Base):
     pin = Column(String(4), nullable=True)
     token_sesion = Column(String(36), unique=True, nullable=True)
     tipo_pago = Column(String(20), default="no_decidido")
+    tiempo_espera_adicional = Column(Integer, default=0)
 
     # --- Relaciones ---
     restaurante = relationship("Restaurante", back_populates="mesas")

@@ -237,21 +237,27 @@ export default function PedidoGrupal() {
             {enviando ? 'Enviando...' : (todosListos ? 'Enviar Pedido a Cocina' : 'Esperando a los demás...')}
           </button>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '8px' }}>
-            <button 
-              className="wf-btn-solid" 
-              style={{ background: 'var(--surface-2)', color: 'var(--text-3)', margin: 0, opacity: 1 }}
-              disabled
-            >
-              Esperando que el líder envíe el pedido
-            </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '16px', 
+              background: 'var(--bg-card)', 
+              borderRadius: '12px', 
+              border: '1px solid var(--border)', 
+              color: 'var(--text-2)', 
+              fontSize: '14px', 
+              fontWeight: '600' 
+            }}>
+              <Clock size={16} style={{ display: 'inline-block', verticalAlign: 'text-bottom', marginRight: '6px' }} />
+              Esperando que el líder envíe el pedido...
+            </div>
             <button 
               className="wf-btn-outline" 
               onClick={handleEnviarMiPedido}
               disabled={enviando}
-              style={{ margin: 0, padding: '14px', fontSize: '14px' }}
+              style={{ margin: 0, width: '100%', padding: '16px', fontSize: '15px' }}
             >
-              Separar mi cuenta y enviar mi pedido ahora
+              {enviando ? 'Enviando...' : 'Separar mi cuenta y pedir ahora'}
             </button>
           </div>
         )}

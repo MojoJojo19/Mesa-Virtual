@@ -152,6 +152,7 @@ export default function Lobby() {
                   onClick={async () => {
                     try {
                       await hacerLiderMesa(user.id);
+                      await handleTipoPagoChange('junto');
                       toast('¡Ahora eres el líder de la mesa!', 'success');
                       setIsLider(true);
                       setAlguienEsLider(true);
@@ -162,7 +163,7 @@ export default function Lobby() {
                   }}
                   style={{ background: 'var(--accent)', padding: '14px 20px', borderRadius: '12px', margin: 0 }}
                 >
-                  👑 Ser el líder (Decidir yo)
+                  👑 Pagar todo junto (Seré el líder)
                 </button>
                 <button 
                   className="wf-btn-outline" 
@@ -178,32 +179,15 @@ export default function Lobby() {
             </div>
           )
         ) : isLider ? (
-          <div className="card" style={{ marginTop: '24px', padding: '20px', textAlign: 'center', border: tipoPago === 'no_decidido' ? '2px dashed var(--accent)' : '1px solid var(--border)' }}>
+          <div className="card" style={{ marginTop: '24px', padding: '20px', textAlign: 'center', border: '1px solid var(--border)' }}>
             <p style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '8px' }}>Eres el líder de la mesa 👑</p>
-            <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '16px' }}>¿Cómo desean dividir la cuenta al finalizar?</p>
-            
-            <div style={{ display: 'flex', gap: '12px', flexDirection: 'column' }}>
-              <button 
-                className={tipoPago === 'junto' ? 'wf-btn-solid' : 'wf-btn-outline'}
-                onClick={() => handleTipoPagoChange('junto')}
-              >
-                Pagar todo junto
-              </button>
-              <button 
-                className={tipoPago === 'separado' ? 'wf-btn-solid' : 'wf-btn-outline'}
-                onClick={() => handleTipoPagoChange('separado')}
-              >
-                Cuentas separadas
-              </button>
-            </div>
+            <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '8px' }}>Has elegido: <strong>Pagar todo junto</strong>.</p>
           </div>
         ) : (
           <div style={{ textAlign: 'center', marginTop: '24px', padding: '16px', background: 'var(--bg-card)', borderRadius: '12px' }}>
             <p style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '8px' }}>👑 {liderNombre} es el líder</p>
             <p style={{ fontSize: '13px', color: 'var(--text-2)' }}>
-              {tipoPago === 'no_decidido' ? 'Esperando que el líder elija cómo pagar...' : 
-               tipoPago === 'junto' ? '💸 El líder ha elegido: Pagar todo junto.' : 
-               '💳 El líder ha elegido: Cuentas separadas.'}
+              💸 El líder pagará la cuenta de toda la mesa.
             </p>
           </div>
         )}
