@@ -172,10 +172,8 @@ def liberar_mesa(id_mesa: int, db: Session = Depends(get_db)):
     
     # 1. Cambiar estado a libre
     mesa.estado = EstadoMesa.libre
-    # 2. Generar un nuevo PIN aleatorio
-    mesa.pin = generar_pin()
-    # Generar un nuevo token de sesión
-    mesa.token_sesion = uuid.uuid4().hex[:8]
+    # NOTA: Ya NO generamos un nuevo PIN ni token de sesión para que el QR sea estático
+    
     # 3. Eliminar los comensales asociados a esta mesa (limpiar la sesión)
     mesa.comensales.clear()
     

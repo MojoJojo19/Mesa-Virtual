@@ -31,6 +31,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         "access_token": access_token,
         "token_type": "bearer",
         "rol": usuario.rol,
+        "id_usuario": usuario.id_usuario,
         "id_restaurante": usuario.id_restaurante,
         "nombre_restaurante": usuario.restaurante.nombre if usuario.restaurante else "SwiftTable"
     }

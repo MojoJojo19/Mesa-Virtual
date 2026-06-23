@@ -2,37 +2,25 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Users, Copy, Share, QrCode } from 'lucide-react'
 import { useToast } from '../components/Toast'
-import { getComensalesDeMesa, getMesa, actualizarConfigMesa, API_URL } from '../services/api'
+import { getComensalesDeMesa, getMesa, actualizarConfigMesa, API_URL, hacerLiderMesa } from '../services/api'
 
 export default function Lobby() {
   const { idMesa } = useParams()
   const navigate = useNavigate()
   const { toast } = useToast()
   
-  const user = JSON.parse(localStorage.getItem('swifttable_user') || '{"nombre":"Carlos","avatar":"🐱","isLider":true}')
-  const isLider = user.isLider || false
+  const user = JSON.parse(localStorage.getItem('swifttable_user') || '{"nombre":"Carlos","avatar":"🐱","isLider":false}')
+  const [isLider, setIsLider] = useState(user.isLider || false)
+  const [alguienEsLider, setAlguienEsLider] = useState(false)
+  const [liderNombre, setLiderNombre] = useState('')
 
-  const [conectados, setConectados] = useState([
-    { nombre: user.nombre || 'Carlos', avatar: user.avatar || '🐱', isLider },
-    { nombre: 'Ana', avatar: '🐶', isLider: false }
-  ])
+  const [conectados, setConectados] = useState([])
   const [pinMesa, setPinMesa] = useState('----')
   const [numeroMesa, setNumeroMesa] = useState(localStorage.getItem('swifttable_numero_mesa') || idMesa)
   const [tokenSesion, setTokenSesion] = useState('')
   const [tipoPago, setTipoPago] = useState('no_decidido')
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setConectados(prev => {
-        if (prev.length <= 2 && prev.some(c => c.nombre === 'Ana')) {
-          toast('Luis se unió a la mesa', 'info')
-          return [...prev, { nombre: 'Luis', avatar: '🦊', isLider: false }]
-        }
-        return prev
-      })
-    }, 4000)
-    return () => clearTimeout(timer)
-  }, [toast])
+
 
   useEffect(() => {
     const verificarEstadoYComensales = async () => {
@@ -59,13 +47,27 @@ export default function Lobby() {
         }
 
         const dbComensales = await getComensalesDeMesa(idMesa)
-        if (dbComensales && dbComensales.length > 0) {
-          const list = dbComensales.map((c, i) => ({
+        if (dbComensales) {
+          const activos = dbComensales.filter(c => c.estado_sesion === 'activa')
+          const list = activos.map((c) => ({
+            id_comensal: c.id_comensal,
             nombre: c.nombre,
             avatar: c.avatar || '🐱',
-            isLider: i === 0
+            isLider: c.is_lider || false
           }))
           setConectados(list)
+          
+          const liderDb = list.find(c => c.isLider)
+          setAlguienEsLider(!!liderDb)
+          if (liderDb) setLiderNombre(liderDb.nombre)
+          
+          const soyLider = liderDb?.id_comensal === user.id
+          setIsLider(soyLider)
+          
+          if (soyLider && !user.isLider) {
+             const updatedUser = { ...user, isLider: true }
+             localStorage.setItem('swifttable_user', JSON.stringify(updatedUser))
+          }
         }
       } catch (err) {
         console.error(err)
@@ -130,7 +132,52 @@ export default function Lobby() {
           </div>
         </div>
 
-        {isLider ? (
+        {!alguienEsLider ? (
+          tipoPago === 'separado' ? (
+            <div className="card animate-pop" style={{ textAlign: 'center', marginTop: '24px', padding: '16px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+              <p style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '8px' }}>💳 Cuentas separadas</p>
+              <p style={{ fontSize: '13px', color: 'var(--text-2)' }}>
+                La mesa ha decidido pagar por separado. No es necesario un líder.
+              </p>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', marginTop: '24px', padding: '24px', background: 'var(--surface-2)', borderRadius: '16px', border: '2px dashed var(--accent)' }}>
+              <p style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-1)' }}>¿Cómo desean pagar? 💸</p>
+              <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '16px' }}>
+                Si desean pagar todo junto, alguien debe ser el líder. Si cada uno pagará lo suyo, no es necesario un líder.
+              </p>
+              <div style={{ display: 'flex', gap: '12px', flexDirection: 'column' }}>
+                <button 
+                  className="wf-btn-solid" 
+                  onClick={async () => {
+                    try {
+                      await hacerLiderMesa(user.id);
+                      toast('¡Ahora eres el líder de la mesa!', 'success');
+                      setIsLider(true);
+                      setAlguienEsLider(true);
+                      setConectados(prev => prev.map(c => c.id_comensal === user.id ? {...c, isLider: true} : c))
+                    } catch(e) {
+                      toast('Error al asignarte como líder.', 'error');
+                    }
+                  }}
+                  style={{ background: 'var(--accent)', padding: '14px 20px', borderRadius: '12px', margin: 0 }}
+                >
+                  👑 Ser el líder (Decidir yo)
+                </button>
+                <button 
+                  className="wf-btn-outline" 
+                  onClick={async () => {
+                    await handleTipoPagoChange('separado');
+                    toast('Se configuró como cuentas separadas', 'success');
+                  }}
+                  style={{ padding: '14px 20px', borderRadius: '12px', margin: 0 }}
+                >
+                  💳 Cuentas separadas (Sin líder)
+                </button>
+              </div>
+            </div>
+          )
+        ) : isLider ? (
           <div className="card" style={{ marginTop: '24px', padding: '20px', textAlign: 'center', border: tipoPago === 'no_decidido' ? '2px dashed var(--accent)' : '1px solid var(--border)' }}>
             <p style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '8px' }}>Eres el líder de la mesa 👑</p>
             <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '16px' }}>¿Cómo desean dividir la cuenta al finalizar?</p>
@@ -152,6 +199,7 @@ export default function Lobby() {
           </div>
         ) : (
           <div style={{ textAlign: 'center', marginTop: '24px', padding: '16px', background: 'var(--bg-card)', borderRadius: '12px' }}>
+            <p style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '8px' }}>👑 {liderNombre} es el líder</p>
             <p style={{ fontSize: '13px', color: 'var(--text-2)' }}>
               {tipoPago === 'no_decidido' ? 'Esperando que el líder elija cómo pagar...' : 
                tipoPago === 'junto' ? '💸 El líder ha elegido: Pagar todo junto.' : 
@@ -208,7 +256,14 @@ export default function Lobby() {
       </div>
 
       <div className="native-bottom-bar">
-        {isLider ? (
+        {(!alguienEsLider && tipoPago === 'separado') ? (
+          <button 
+            className="wf-btn-solid" 
+            onClick={() => navigate(`/mesa/${idMesa}/menu`)}
+          >
+            Empezar a Pedir
+          </button>
+        ) : isLider ? (
           <button 
             className="wf-btn-solid" 
             onClick={() => navigate(`/mesa/${idMesa}/menu`)}
@@ -222,7 +277,7 @@ export default function Lobby() {
             className="wf-btn-outline" 
             onClick={() => navigate(`/mesa/${idMesa}/menu`)}
           >
-            Ver menú mientras esperamos
+            {tipoPago === 'no_decidido' ? 'Ver menú mientras deciden' : 'Ir al menú'}
           </button>
         )}
       </div>

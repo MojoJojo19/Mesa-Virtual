@@ -53,10 +53,9 @@ if use_sqlite:
             db.refresh(rest2)
             
             # Crear mesas
-            # Mesa 7 de prueba (para coincidir con el frontend)
-            mesa7 = Mesa(id_restaurante=rest1.id_restaurante, numero=7, estado="libre", pin="7823")
-            mesa1001 = Mesa(id_restaurante=rest1.id_restaurante, numero=1001, estado="libre", pin="1111")
-            db.add_all([mesa7, mesa1001])
+            mesa7 = Mesa(id_restaurante=rest1.id_restaurante, numero=7, estado="libre", pin="1234")
+            mesa1 = Mesa(id_restaurante=rest1.id_restaurante, numero=1, estado="libre", pin="1111")
+            db.add_all([mesa7, mesa1])
             
             # Crear categorías
             cat_pollos = Categoria(id_restaurante=rest1.id_restaurante, nombre="Pollos", descripcion="Pollo a la brasa")

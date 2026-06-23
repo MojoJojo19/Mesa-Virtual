@@ -202,6 +202,35 @@ export const buscarMesaPorPin = async (pin) => {
   }
 }
 
+export const loginPersonal = async (correo, contrasena) => {
+  try {
+    const formData = new URLSearchParams()
+    formData.append('username', correo)
+    formData.append('password', contrasena)
+
+    const res = await fetchWithTimeout(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData.toString()
+    })
+    
+    if (!res.ok) throw new Error('Credenciales incorrectas')
+    return await res.json()
+  } catch (err) {
+    // Mock login para desarrollo sin backend
+    if (correo === 'admin@fogata.com' || correo === 'mesero@fogata.com') {
+      return {
+        access_token: 'mock_token',
+        rol: correo.includes('admin') ? 'admin' : 'mesero',
+        id_usuario: 99,
+        id_restaurante: 1,
+        nombre_restaurante: 'La Fogata'
+      }
+    }
+    throw err
+  }
+}
+
 export const crearComensal = async (nombre, avatar, idMesa) => {
   try {
     const res = await fetchWithTimeout(`${API_URL}/comensales/`, {
@@ -209,11 +238,29 @@ export const crearComensal = async (nombre, avatar, idMesa) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nombre, avatar, id_mesa: parseInt(idMesa) })
     })
-    if (!res.ok) throw new Error('Error')
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || 'Error al ingresar');
+    }
     return await res.json()
-  } catch {
-    // Fallback: simular creación exitosa
+  } catch (e) {
+    if (e.message && e.message !== 'Error' && e.message !== 'Error al ingresar') {
+      throw e; // Lanzar error específico del backend para que Ingreso.jsx lo muestre
+    }
+    // Fallback: simular creación exitosa si el error es de conexión genérica
     return { id_comensal: Date.now(), nombre, avatar, id_mesa: parseInt(idMesa) }
+  }
+}
+
+export const hacerLiderMesa = async (idComensal) => {
+  try {
+    const res = await fetchWithTimeout(`${API_URL}/comensales/${idComensal}/hacer-lider`, {
+      method: 'PUT'
+    })
+    if (!res.ok) throw new Error('Error al asignar líder')
+    return await res.json()
+  } catch (err) {
+    throw err
   }
 }
 
@@ -465,8 +512,6 @@ export const liberarMesa = async (idMesa) => {
           return { 
             ...m, 
             estado: 'libre', 
-            pin: Math.floor(1000 + Math.random() * 9000).toString(), 
-            token_sesion: Math.random().toString(36).substring(2, 10),
             comensales: [] 
           };
         }
@@ -610,16 +655,28 @@ export const getPedidosTodos = async (idRestaurante = null) => {
 
 
 export const registrarPago = async (idPedido, montoTotal, propina, metodoPago) => {
+  // Obtener id_usuario logueado (mesero) si existe
+  const tokenStr = localStorage.getItem('swifttable_staff_token')
+  const userStr = localStorage.getItem('swifttable_staff_user')
+  let idUsuario = null
+  if (userStr) {
+    try { idUsuario = JSON.parse(userStr).id_usuario } catch (e) {}
+  }
+
   const payload = {
     monto_total: parseFloat(montoTotal),
     propina: propina ? parseFloat(propina) : 0,
     metodo_pago: metodoPago,
-    id_pedido: parseInt(idPedido)
+    id_pedido: parseInt(idPedido),
+    id_usuario: idUsuario
   };
   try {
     const res = await fetchWithTimeout(`${API_URL}/pagos/`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(tokenStr ? { 'Authorization': `Bearer ${tokenStr}` } : {})
+      },
       body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error('Error');

@@ -8,6 +8,7 @@ class PagoCreate(BaseModel):
     propina: Optional[Decimal] = None
     metodo_pago: str
     id_pedido: int
+    id_usuario: Optional[int] = None
 
 class PagoResponse(BaseModel):
     id_pago: int
@@ -16,6 +17,7 @@ class PagoResponse(BaseModel):
     metodo_pago: str
     fecha_pago: datetime
     id_pedido: int
+    id_usuario: Optional[int] = None
 
     class Config:
         from_attributes = True

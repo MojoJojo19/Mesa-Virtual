@@ -2,15 +2,14 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ChevronLeft, Users, Check, Clock } from 'lucide-react'
 import { useToast } from '../components/Toast'
-import { enviarPedido, getMesa, getComensalesDeMesa } from '../services/api'
+import { enviarPedido, getMesa, getComensalesDeMesa, actualizarCarritoComensal } from '../services/api'
 
 export default function PedidoGrupal() {
   const { idMesa } = useParams()
   const navigate = useNavigate()
   const { toast } = useToast()
 
-  const user = JSON.parse(localStorage.getItem('swifttable_user') || '{"nombre":"Carlos","avatar":"🐱","isLider":true}')
-  const isLider = user.isLider || false
+  const user = JSON.parse(localStorage.getItem('swifttable_user') || '{"nombre":"Carlos","avatar":"🐱","isLider":false}')
   const miCarrito = JSON.parse(localStorage.getItem('swifttable_carrito') || '[]')
   
   const miTotal = miCarrito.reduce((s, p) => s + Number(p.precio || 0) * (p.cantidad || 1), 0)
@@ -59,7 +58,9 @@ export default function PedidoGrupal() {
     return () => clearInterval(interval)
   }, [idMesa, navigate, toast])
 
-  const todosListos = comensales.every(c => c.estado_pedido === 'listo')
+  const hayLider = comensales.some(c => c.is_lider)
+  const isLider = comensales.find(c => c.id_comensal === (user.id_comensal || user.id))?.is_lider || false
+  const todosListos = comensales.length > 0 && comensales.every(c => c.estado_pedido === 'listo' || c.estado_pedido === 'separado')
 
   const handleEnviarPedido = async () => {
     if (!todosListos) {
@@ -71,15 +72,17 @@ export default function PedidoGrupal() {
     try {
       const todosItems = []
       comensales.forEach(c => {
-        const cart = Array.isArray(c.carrito) ? c.carrito : []
-        cart.forEach(it => {
-          const existente = todosItems.find(x => x.id_producto === it.id_producto)
-          if (existente) {
-            existente.cantidad += it.cantidad
-          } else if (it.id_producto) {
-            todosItems.push({ id_producto: it.id_producto, cantidad: it.cantidad })
-          }
-        })
+        if (c.estado_pedido === 'listo') {
+          const cart = Array.isArray(c.carrito) ? c.carrito : []
+          cart.forEach(it => {
+            const existente = todosItems.find(x => x.id_producto === it.id_producto)
+            if (existente) {
+              existente.cantidad += it.cantidad
+            } else if (it.id_producto) {
+              todosItems.push({ id_producto: it.id_producto, cantidad: it.cantidad })
+            }
+          })
+        }
       })
 
       if (todosItems.length === 0) {
@@ -94,6 +97,33 @@ export default function PedidoGrupal() {
       navigate(`/mesa/${idMesa}/confirmado`)
     } catch (err) {
       toast('Error al enviar el pedido', 'error')
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  const handleEnviarMiPedido = async () => {
+    setEnviando(true)
+    try {
+      const miCart = Array.isArray(miCarrito) ? miCarrito : []
+      if (miCart.length === 0) {
+        toast('Tu carrito está vacío', 'error')
+        setEnviando(false)
+        return
+      }
+
+      const todosItems = miCart.map(it => ({ id_producto: it.id_producto, cantidad: it.cantidad }))
+      const res = await enviarPedido(idMesa, todosItems)
+      localStorage.setItem('swifttable_id_pedido', res.id_pedido)
+      
+      if (user.id_comensal || user.id) {
+        await actualizarCarritoComensal(user.id_comensal || user.id, 'separado', miCart).catch(() => {})
+      }
+      
+      toast('¡Tu pedido individual fue enviado a cocina!', 'success')
+      navigate(`/mesa/${idMesa}/confirmado`)
+    } catch (err) {
+      toast('Error al enviar tu pedido individual', 'error')
     } finally {
       setEnviando(false)
     }
@@ -163,11 +193,13 @@ export default function PedidoGrupal() {
                       <span style={{ fontWeight: '700', color: 'var(--text-1)', fontSize: '15px' }}>
                         {comensal.nombre} {isMe && <span style={{ color: 'var(--text-3)', fontWeight: '500' }}>(Tú)</span>}
                       </span>
-                      {comensal.isLider && <span style={{ fontSize: '10px', background: 'var(--surface-2)', padding: '2px 6px', borderRadius: '4px', fontWeight: '700', color: 'var(--text-2)' }}>Líder</span>}
+                      {comensal.is_lider && <span style={{ fontSize: '10px', background: 'var(--surface-2)', padding: '2px 6px', borderRadius: '4px', fontWeight: '700', color: 'var(--text-2)' }}>Líder</span>}
                     </div>
                     <div style={{ fontSize: '13px', color: 'var(--text-2)' }}>
                       {comensal.estado_pedido === 'eligiendo' ? (
                         <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--orange, #f59e0b)' }}><Clock size={14} /> Eligiendo...</span>
+                      ) : comensal.estado_pedido === 'separado' ? (
+                        <span style={{ color: 'var(--blue)', fontWeight: '500' }}>(Pedido enviado por separado)</span>
                       ) : (
                         <span>
                           {cart.length > 0 
@@ -188,7 +220,15 @@ export default function PedidoGrupal() {
       </div>
 
       <div className="native-bottom-bar">
-        {isLider ? (
+        {tipoPago === 'separado' ? (
+          <button 
+            className="wf-btn-solid" 
+            onClick={handleEnviarMiPedido}
+            disabled={enviando}
+          >
+            {enviando ? 'Enviando...' : 'Enviar mi pedido a cocina'}
+          </button>
+        ) : (isLider || !hayLider) ? (
           <button 
             className="wf-btn-solid" 
             onClick={handleEnviarPedido}
@@ -197,8 +237,22 @@ export default function PedidoGrupal() {
             {enviando ? 'Enviando...' : (todosListos ? 'Enviar Pedido a Cocina' : 'Esperando a los demás...')}
           </button>
         ) : (
-          <div style={{ width: '100%', textAlign: 'center', padding: '16px', fontSize: '14px', color: 'var(--text-2)', fontWeight: '500' }}>
-            Esperando a que el líder envíe el pedido
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '8px' }}>
+            <button 
+              className="wf-btn-solid" 
+              style={{ background: 'var(--surface-2)', color: 'var(--text-3)', margin: 0, opacity: 1 }}
+              disabled
+            >
+              Esperando que el líder envíe el pedido
+            </button>
+            <button 
+              className="wf-btn-outline" 
+              onClick={handleEnviarMiPedido}
+              disabled={enviando}
+              style={{ margin: 0, padding: '14px', fontSize: '14px' }}
+            >
+              Separar mi cuenta y enviar mi pedido ahora
+            </button>
           </div>
         )}
       </div>
