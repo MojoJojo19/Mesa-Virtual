@@ -51,6 +51,12 @@ def obtener_mesa(id_mesa: int, db: Session = Depends(get_db)):
     item = db.query(Mesa).filter(Mesa.id_mesa == id_mesa).first()
     if not item:
         raise HTTPException(status_code=404, detail="Mesa no encontrada")
+    
+    if not item.token_sesion:
+        item.token_sesion = uuid.uuid4().hex[:8]
+        db.commit()
+        db.refresh(item)
+        
     return item
 
 
