@@ -31,18 +31,53 @@ export default function Logistica() {
 
   const asistenciasPrevias = useRef(new Set())
   const timeoutExtraTimeRefs = useRef({})
+  const audioCtxRef = useRef(null)
 
   const obtenerNumeroMesa = (idMesa) => {
     const mesa = mesas.find(m => m.id_mesa === parseInt(idMesa))
     return mesa ? mesa.numero : idMesa
   }
 
+  // Inicializar o reanudar el contexto de audio mediante interacción del usuario
+  const iniciarAudio = () => {
+    try {
+      if (!audioCtxRef.current) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext
+        if (AudioContext) {
+          audioCtxRef.current = new AudioContext()
+        }
+      }
+      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume()
+      }
+    } catch (e) {
+      console.warn("No se pudo iniciar el contexto de audio:", e)
+    }
+  }
+
+  // Escuchar interacciones para desbloquear el audio (Autoplay Policy de los navegadores)
+  useEffect(() => {
+    const habilitarAudioGestos = () => {
+      iniciarAudio()
+      if (audioCtxRef.current && audioCtxRef.current.state === 'running') {
+        window.removeEventListener('click', habilitarAudioGestos)
+        window.removeEventListener('touchstart', habilitarAudioGestos)
+      }
+    }
+    window.addEventListener('click', habilitarAudioGestos)
+    window.addEventListener('touchstart', habilitarAudioGestos)
+    return () => {
+      window.removeEventListener('click', habilitarAudioGestos)
+      window.removeEventListener('touchstart', habilitarAudioGestos)
+    }
+  }, [])
+
   // Sintetizador Web Audio para un sonido limpio y compatible sin requerir archivos externos
   const reproducirSonidoAlerta = () => {
     try {
-      const AudioContext = window.AudioContext || window.webkitAudioContext
-      if (!AudioContext) return
-      const ctx = new AudioContext()
+      iniciarAudio()
+      const ctx = audioCtxRef.current
+      if (!ctx || ctx.state === 'suspended') return
       
       const playNote = (time, freq, duration) => {
         const osc = ctx.createOscillator()
@@ -965,7 +1000,7 @@ export default function Logistica() {
         <div className="title">{nombreRestaurante} - Logística</div>
         <div className="right-action" style={{ gap: '12px', width: 'auto', minWidth: '40px' }}>
           <button 
-            onClick={() => setSonidoHabilitado(!sonidoHabilitado)}
+            onClick={() => { iniciarAudio(); setSonidoHabilitado(!sonidoHabilitado); }}
             className="wf-btn-ghost"
             style={{ padding: 0, display: 'flex', alignItems: 'center' }}
             title={sonidoHabilitado ? "Silenciar sonido" : "Activar sonido"}
