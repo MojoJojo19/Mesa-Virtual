@@ -199,7 +199,21 @@ export const enviarPedido = async (idMesa, items) => {
     if (!res.ok) throw new Error('Error')
     return await res.json()
   } catch {
-    return { id_pedido: Date.now(), estado: 'pendiente' }
+    return { id_pedido: Date.now(), items, estado: 'pendiente' }
+  }
+}
+
+export const actualizarCarritoComensal = async (idComensal, estadoPedido, carrito) => {
+  try {
+    const res = await fetchWithTimeout(`${API_URL}/comensales/${idComensal}/carrito`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ estado_pedido: estadoPedido, carrito })
+    })
+    if (!res.ok) throw new Error('Error')
+    return await res.json()
+  } catch {
+    return { success: true } // Fallback simulado
   }
 }
 

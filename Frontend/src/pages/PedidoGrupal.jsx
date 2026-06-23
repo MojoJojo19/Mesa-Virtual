@@ -15,32 +15,27 @@ export default function PedidoGrupal() {
   
   const miTotal = miCarrito.reduce((s, p) => s + Number(p.precio || 0) * (p.cantidad || 1), 0)
 
-  const [pedidosMesa, setPedidosMesa] = useState([
-    {
-      id: user.id || 'u1', nombre: user.nombre || 'Carlos', avatar: user.avatar || '🐱',
-      estado: 'listo', isLider, items: miCarrito, total: miTotal
-    },
-    {
-      id: 'u2', nombre: 'Ana', avatar: '🐶', estado: 'listo', isLider: false,
-      items: [{ id_producto: 2, nombre: 'Pollo a la brasa 1/2', cantidad: 1, precio: 32.00 }], total: 32.00
-    },
-    {
-      id: 'u3', nombre: 'Luis', avatar: '🦊', estado: 'eligiendo', isLider: false,
-      items: [], total: 0
-    }
-  ])
+  const miTotal = miCarrito.reduce((s, p) => s + Number(p.precio || 0) * (p.cantidad || 1), 0)
 
+  const [comensales, setComensales] = useState([])
   const [enviando, setEnviando] = useState(false)
 
+  // Polling de los comensales reales de la mesa
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setPedidosMesa(prev => prev.map(p => {
-        if (p.id === 'u3') return { ...p, estado: 'listo', items: [{ id_producto: 1, nombre: 'Pollo a la brasa 1/4', cantidad: 1, precio: 18.00 }], total: 18.00 }
-        return p
-      }))
-    }, 5000)
-    return () => clearTimeout(timer)
-  }, [])
+    const fetchComensales = async () => {
+      try {
+        const data = await getComensalesDeMesa(idMesa)
+        // Filtramos solo los que siguen activos en la mesa
+        const activos = (data || []).filter(c => c.estado_sesion === 'activa')
+        setComensales(activos)
+      } catch (err) {
+        console.error(err)
+      }
+    }
+    fetchComensales()
+    const interval = setInterval(fetchComensales, 3000)
+    return () => clearInterval(interval)
+  }, [idMesa])
 
   useEffect(() => {
     const verificarMesa = async () => {
@@ -62,12 +57,20 @@ export default function PedidoGrupal() {
     return () => clearInterval(interval)
   }, [idMesa, navigate, toast])
 
+  const todosListos = comensales.every(c => c.estado_pedido === 'listo')
+
   const handleEnviarPedido = async () => {
+    if (!todosListos) {
+      toast('No podemos enviar a cocina hasta que todos estén listos', 'error')
+      return
+    }
+    
     setEnviando(true)
     try {
       const todosItems = []
-      pedidosMesa.forEach(p => {
-        p.items.forEach(it => {
+      comensales.forEach(c => {
+        const cart = Array.isArray(c.carrito) ? c.carrito : []
+        cart.forEach(it => {
           const existente = todosItems.find(x => x.id_producto === it.id_producto)
           if (existente) {
             existente.cantidad += it.cantidad
@@ -94,9 +97,14 @@ export default function PedidoGrupal() {
     }
   }
 
-  const todosListos = pedidosMesa.every(p => p.estado === 'listo')
-  const totalMesa = pedidosMesa.reduce((sum, p) => sum + p.total, 0)
-  const totalItems = pedidosMesa.reduce((sum, p) => sum + p.items.reduce((s, i) => s + i.cantidad, 0), 0)
+  const totalMesa = comensales.reduce((sum, c) => {
+    const cart = Array.isArray(c.carrito) ? c.carrito : []
+    return sum + cart.reduce((s, i) => s + (Number(i.precio || 0) * (i.cantidad || 1)), 0)
+  }, 0)
+  const totalItems = comensales.reduce((sum, c) => {
+    const cart = Array.isArray(c.carrito) ? c.carrito : []
+    return sum + cart.reduce((s, i) => s + (i.cantidad || 1), 0)
+  }, 0)
 
   const restName = localStorage.getItem('swifttable_nombre_restaurante') || 'SwiftTable'
 
@@ -132,36 +140,43 @@ export default function PedidoGrupal() {
         </div>
 
         <div className="card" style={{ padding: '0' }}>
-          {pedidosMesa.map((p, idx) => (
-            <div key={p.id} className="list-item" style={{ padding: '16px' }}>
-              <div className="avatar-circle" style={{ 
-                background: p.estado === 'listo' ? 'var(--green-bg)' : 'var(--bg)',
-                color: p.estado === 'listo' ? 'var(--green)' : 'var(--text-3)' 
-              }}>
-                {p.estado === 'listo' ? p.avatar : <Clock size={20} />}
-              </div>
-              
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {p.nombre} {p.id === user.id && <span style={{ fontSize: '13px', color: 'var(--text-3)' }}>(Tú)</span>}
-                  {p.isLider && <span style={{ fontSize: '11px', background: 'var(--bg)', padding: '2px 6px', borderRadius: '4px' }}>Líder</span>}
-                </div>
-                {p.estado === 'listo' ? (
-                  <div style={{ fontSize: '13px', color: 'var(--text-2)', marginTop: '4px' }}>
-                    {p.items.map(i => `${i.cantidad}x ${i.nombre}`).join(', ')}
+          {comensales.map(comensal => {
+            const isMe = comensal.id_comensal === (user.id_comensal || user.id)
+            const cart = Array.isArray(comensal.carrito) ? comensal.carrito : []
+            const totalPersona = cart.reduce((s, i) => s + (Number(i.precio || 0) * (i.cantidad || 1)), 0)
+            
+            return (
+              <div key={comensal.id_comensal} className="comensal-order-card" style={{ borderBottom: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px' }}>
+                  <div className="avatar" style={{ fontSize: '24px', width: '48px', height: '48px', background: 'var(--bg)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {comensal.avatar || '👤'}
                   </div>
-                ) : (
-                  <div style={{ fontSize: '13px', color: 'var(--text-3)', fontStyle: 'italic', marginTop: '4px' }}>Eligiendo platos...</div>
-                )}
-              </div>
-
-              {p.estado === 'listo' && (
-                <div style={{ fontSize: '16px', fontWeight: '600' }}>
-                  S/ {p.total.toFixed(2)}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                      <span style={{ fontWeight: '700', color: 'var(--text-1)', fontSize: '15px' }}>
+                        {comensal.nombre} {isMe && <span style={{ color: 'var(--text-3)', fontWeight: '500' }}>(Tú)</span>}
+                      </span>
+                      {comensal.isLider && <span style={{ fontSize: '10px', background: 'var(--surface-2)', padding: '2px 6px', borderRadius: '4px', fontWeight: '700', color: 'var(--text-2)' }}>Líder</span>}
+                    </div>
+                    <div style={{ fontSize: '13px', color: 'var(--text-2)' }}>
+                      {comensal.estado_pedido === 'eligiendo' ? (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--orange, #f59e0b)' }}><Clock size={14} /> Eligiendo...</span>
+                      ) : (
+                        <span>
+                          {cart.length > 0 
+                            ? cart.map(i => `${i.cantidad}x ${i.nombre}`).join(', ') 
+                            : 'Sin pedido'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ fontWeight: '800', fontSize: '16px', color: 'var(--text-1)' }}>
+                    {totalPersona > 0 && `S/ ${totalPersona.toFixed(2)}`}
+                  </div>
                 </div>
-              )}
-            </div>
-          ))}
+              </div>
+            )
+          })}
         </div>
       </div>
 

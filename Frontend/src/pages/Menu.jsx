@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Search, ShoppingBag, Bell, QrCode } from 'lucide-react'
-import { getPlatos, getCategorias, llamarMesero, getMesa, API_URL } from '../services/api'
+import { getPlatos, getCategorias, llamarMesero, getMesa, API_URL, actualizarCarritoComensal } from '../services/api'
 import { useToast } from '../components/Toast'
 
 export default function Menu() {
   const { idMesa } = useParams()
   const navigate = useNavigate()
   const { toast } = useToast()
+
+  const user = JSON.parse(localStorage.getItem('swifttable_user') || '{}')
+  const idComensalLocal = user.id_comensal || user.id
 
   const [carrito, setCarrito] = useState([])
   const [showBellMenu, setShowBellMenu] = useState(false)
@@ -88,8 +91,19 @@ export default function Menu() {
 
   useEffect(() => {
     const prevCart = localStorage.getItem('swifttable_carrito')
-    if (prevCart) setCarrito(JSON.parse(prevCart))
+    if (prevCart) {
+      try { setCarrito(JSON.parse(prevCart)) } catch (e) {}
+    }
   }, [])
+
+  // Sincronizar con el backend cada vez que cambie el carrito
+  useEffect(() => {
+    // Evitar loop inicial si está vacío y no ha cambiado (aunque enviar [] es seguro)
+    localStorage.setItem('swifttable_carrito', JSON.stringify(carrito))
+    if (idComensalLocal) {
+      actualizarCarritoComensal(idComensalLocal, 'eligiendo', carrito).catch(() => {})
+    }
+  }, [carrito, idComensalLocal])
 
   const platosFiltrados = platos.filter(p => p.id_categoria === categoria)
 
@@ -115,9 +129,12 @@ export default function Menu() {
     })
   }
 
-  const handleConfirmar = () => {
+  const handleConfirmar = async () => {
     if (carrito.length === 0) return
     localStorage.setItem('swifttable_carrito', JSON.stringify(carrito))
+    if (idComensalLocal) {
+      await actualizarCarritoComensal(idComensalLocal, 'listo', carrito).catch(() => {})
+    }
     navigate(`/mesa/${idMesa}/pedido-grupo`)
   }
 

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List, Any
 from pydantic import BaseModel
 
 class ComensalCreate(BaseModel):
@@ -12,6 +12,12 @@ class ComensalResponse(BaseModel):
     avatar: Optional[str] = None
     estado_sesion: str
     id_mesa: int
+    estado_pedido: Optional[str] = "eligiendo"
+    carrito: Optional[List[Any]] = []
 
     class Config:
         from_attributes = True
+
+class ComensalCarritoUpdate(BaseModel):
+    estado_pedido: str
+    carrito: List[Any]

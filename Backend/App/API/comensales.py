@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from App.DataBase.connection import get_db
 from App.Models.comensal import Comensal, EstadoSesion
-from App.Schemas.comensal import ComensalCreate, ComensalResponse
+from App.Schemas.comensal import ComensalCreate, ComensalResponse, ComensalCarritoUpdate
 
 router = APIRouter(prefix="/api/comensales", tags=["Comensales"])
 
@@ -51,6 +51,21 @@ def cerrar_sesion_comensal(id_comensal: int, db: Session = Depends(get_db)):
     if not item:
         raise HTTPException(status_code=404, detail="Comensal no encontrado")
     item.estado_sesion = EstadoSesion.inactiva
+    db.commit()
+    db.refresh(item)
+    return item
+
+@router.put("/{id_comensal}/carrito", response_model=ComensalResponse)
+def actualizar_carrito_comensal(id_comensal: int, datos: ComensalCarritoUpdate, db: Session = Depends(get_db)):
+    """
+    Actualiza el carrito temporal y el estado ('eligiendo' o 'listo') del comensal.
+    """
+    item = db.query(Comensal).filter(Comensal.id_comensal == id_comensal).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Comensal no encontrado")
+    
+    item.estado_pedido = datos.estado_pedido
+    item.carrito = datos.carrito
     db.commit()
     db.refresh(item)
     return item
