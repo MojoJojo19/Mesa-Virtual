@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ChevronLeft, Users, Check, Clock } from 'lucide-react'
 import { useToast } from '../components/Toast'
-import { enviarPedido, getMesa } from '../services/api'
+import { enviarPedido, getMesa, getComensalesDeMesa } from '../services/api'
 
 export default function PedidoGrupal() {
   const { idMesa } = useParams()
@@ -13,8 +13,6 @@ export default function PedidoGrupal() {
   const isLider = user.isLider || false
   const miCarrito = JSON.parse(localStorage.getItem('swifttable_carrito') || '[]')
   
-  const miTotal = miCarrito.reduce((s, p) => s + Number(p.precio || 0) * (p.cantidad || 1), 0)
-
   const miTotal = miCarrito.reduce((s, p) => s + Number(p.precio || 0) * (p.cantidad || 1), 0)
 
   const [comensales, setComensales] = useState([])
