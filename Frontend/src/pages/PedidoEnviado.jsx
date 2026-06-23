@@ -12,6 +12,7 @@ export default function PedidoEnviado() {
   const [pedidos, setPedidos] = useState([])
   const [cargando, setCargando] = useState(true)
   const [minutos, setMinutos] = useState(15)
+  const [tiempoEsperaGlobal, setTiempoEsperaGlobal] = useState(15)
   const [estadoAnterior, setEstadoAnterior] = useState('esperando')
 
   const handleLlamarMozo = async () => {
@@ -97,6 +98,27 @@ export default function PedidoEnviado() {
         localStorage.removeItem('swifttable_carrito')
         localStorage.removeItem('swifttable_user')
         navigate(`/mesa/${idMesa}`)
+        return
+      }
+
+      // Calcular tiempo dinámico (Opción B)
+      if (mesaInfo && mesaInfo.restaurante && mesaInfo.restaurante.tiempo_espera_global) {
+        const globalTime = mesaInfo.restaurante.tiempo_espera_global
+        setTiempoEsperaGlobal(globalTime)
+        
+        if (peds && peds.length > 0) {
+          // Tomar el pedido más antiguo que esté en preparación
+          const pedsActivos = peds.filter(p => p.estado === 'pendiente' || p.estado === 'en_preparacion')
+          if (pedsActivos.length > 0) {
+            const oldest = pedsActivos.sort((a, b) => new Date(a.fecha_hora) - new Date(b.fecha_hora))[0]
+            const msTranscurridos = Date.now() - new Date(oldest.fecha_hora).getTime()
+            const minsTranscurridos = Math.floor(msTranscurridos / 60000)
+            const tiempoRestante = Math.max(0, globalTime - minsTranscurridos)
+            setMinutos(tiempoRestante)
+          } else {
+            setMinutos(0) // Todos listos
+          }
+        }
       }
     } catch (e) {
       console.error(e)
@@ -114,13 +136,8 @@ export default function PedidoEnviado() {
       verificarEstado()
     }, 5000)
 
-    const timer = setInterval(() => {
-      setMinutos(m => (m > 0 ? m - 1 : 0))
-    }, 60000)
-
     return () => {
       clearInterval(interval)
-      clearInterval(timer)
     }
   }, [idMesa])
 

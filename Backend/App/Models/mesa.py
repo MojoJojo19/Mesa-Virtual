@@ -20,6 +20,7 @@ class Mesa(Base):
     # PIN de 4 dígitos autogenerado al crear la mesa (HU-01: control de acceso a la sesión)
     pin = Column(String(4), nullable=True)
     token_sesion = Column(String(36), unique=True, nullable=True)
+    tipo_pago = Column(String(20), default="no_decidido")
 
     # --- Relaciones ---
     restaurante = relationship("Restaurante", back_populates="mesas")

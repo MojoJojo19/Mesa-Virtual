@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Users, Copy, Share, QrCode } from 'lucide-react'
 import { useToast } from '../components/Toast'
-import { getComensalesDeMesa, getMesa, API_URL } from '../services/api'
+import { getComensalesDeMesa, getMesa, actualizarConfigMesa, API_URL } from '../services/api'
 
 export default function Lobby() {
   const { idMesa } = useParams()
@@ -19,6 +19,7 @@ export default function Lobby() {
   const [pinMesa, setPinMesa] = useState('----')
   const [numeroMesa, setNumeroMesa] = useState(localStorage.getItem('swifttable_numero_mesa') || idMesa)
   const [tokenSesion, setTokenSesion] = useState('')
+  const [tipoPago, setTipoPago] = useState('no_decidido')
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -48,6 +49,13 @@ export default function Lobby() {
           setPinMesa(mesaInfo.pin || '----')
           setNumeroMesa(mesaInfo.numero || idMesa)
           setTokenSesion(mesaInfo.token_sesion || '')
+          if (mesaInfo.tipo_pago) {
+            setTipoPago(prev => {
+              // Si soy el líder y ya elegí, no dejo que el polling viejo lo sobreescriba (evita parpadeos)
+              if (isLider && prev !== 'no_decidido') return prev;
+              return mesaInfo.tipo_pago;
+            })
+          }
         }
 
         const dbComensales = await getComensalesDeMesa(idMesa)
@@ -75,6 +83,15 @@ export default function Lobby() {
       : `${window.location.origin}/mesa/${idMesa}`;
     navigator.clipboard.writeText(url)
     toast('Enlace de invitación copiado', 'success')
+  }
+
+  const handleTipoPagoChange = async (tipo) => {
+    setTipoPago(tipo)
+    try {
+      await actualizarConfigMesa(idMesa, tipo)
+    } catch (e) {
+      console.error(e)
+    }
   }
 
   const restName = localStorage.getItem('swifttable_nombre_restaurante') || 'SwiftTable'
@@ -113,10 +130,34 @@ export default function Lobby() {
           </div>
         </div>
 
-        {isLider && (
-          <p style={{ fontSize: '14px', color: 'var(--text-2)', textAlign: 'center', margin: '24px 16px' }}>
-            Eres el líder. Decide cuándo empezar el pedido por todos.
-          </p>
+        {isLider ? (
+          <div className="card" style={{ marginTop: '24px', padding: '20px', textAlign: 'center', border: tipoPago === 'no_decidido' ? '2px dashed var(--accent)' : '1px solid var(--border)' }}>
+            <p style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '8px' }}>Eres el líder de la mesa 👑</p>
+            <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '16px' }}>¿Cómo desean dividir la cuenta al finalizar?</p>
+            
+            <div style={{ display: 'flex', gap: '12px', flexDirection: 'column' }}>
+              <button 
+                className={tipoPago === 'junto' ? 'wf-btn-solid' : 'wf-btn-outline'}
+                onClick={() => handleTipoPagoChange('junto')}
+              >
+                Pagar todo junto
+              </button>
+              <button 
+                className={tipoPago === 'separado' ? 'wf-btn-solid' : 'wf-btn-outline'}
+                onClick={() => handleTipoPagoChange('separado')}
+              >
+                Cuentas separadas
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', marginTop: '24px', padding: '16px', background: 'var(--bg-card)', borderRadius: '12px' }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-2)' }}>
+              {tipoPago === 'no_decidido' ? 'Esperando que el líder elija cómo pagar...' : 
+               tipoPago === 'junto' ? '💸 El líder ha elegido: Pagar todo junto.' : 
+               '💳 El líder ha elegido: Cuentas separadas.'}
+            </p>
+          </div>
         )}
 
         {/* Código QR de Invitación en la Mesa (Para que otros comensales se unan escaneando la pantalla de la tableta) */}
@@ -171,8 +212,10 @@ export default function Lobby() {
           <button 
             className="wf-btn-solid" 
             onClick={() => navigate(`/mesa/${idMesa}/menu`)}
+            disabled={tipoPago === 'no_decidido'}
+            style={{ opacity: tipoPago === 'no_decidido' ? 0.5 : 1 }}
           >
-            Empezar a Pedir
+            {tipoPago === 'no_decidido' ? 'Elige el tipo de pago' : 'Empezar a Pedir'}
           </button>
         ) : (
           <button 

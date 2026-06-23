@@ -12,6 +12,7 @@ class Restaurante(Base):
     direccion = Column(String(255), nullable=True)
     telefono = Column(String(20), nullable=True)
     estado = Column(String(20), default="activo")
+    tiempo_espera_global = Column(Integer, default=15)
     creado_en = Column(DateTime, server_default=func.now())
 
     # Relaciones de cascada

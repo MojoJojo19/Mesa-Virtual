@@ -11,7 +11,7 @@ from App.Models.comensal import Comensal
 from App.Schemas.mesa import (
     MesaCreate, MesaResponse, MesaCreateResponse,
     ValidarPinRequest, ValidarPinResponse, MesaEstadoUpdate,
-    BuscarPorPinRequest, BuscarPorPinResponse
+    BuscarPorPinRequest, BuscarPorPinResponse, MesaConfigUpdate
 )
 from App.Schemas.comensal import ComensalResponse
 from App.Utils.qr_generator import generar_qr_mesa
@@ -60,6 +60,16 @@ def actualizar_estado_mesa(id_mesa: int, datos: MesaEstadoUpdate, db: Session = 
     if not mesa:
         raise HTTPException(status_code=404, detail="Mesa no encontrada")
     mesa.estado = datos.estado
+    db.commit()
+    db.refresh(mesa)
+    return mesa
+
+@router.put("/{id_mesa}/configuracion", response_model=MesaResponse)
+def actualizar_config_mesa(id_mesa: int, datos: MesaConfigUpdate, db: Session = Depends(get_db)):
+    mesa = db.query(Mesa).filter(Mesa.id_mesa == id_mesa).first()
+    if not mesa:
+        raise HTTPException(status_code=404, detail="Mesa no encontrada")
+    mesa.tipo_pago = datos.tipo_pago
     db.commit()
     db.refresh(mesa)
     return mesa

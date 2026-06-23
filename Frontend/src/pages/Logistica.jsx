@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, FileText, ChevronLeft, RefreshCw, CheckCircle, Clock, Plus, Volume2, VolumeX, X, User, Utensils, LayoutGrid, ChefHat, ConciergeBell, Receipt, DollarSign, QrCode } from 'lucide-react'
-import { getAsistencias, atenderAsistencia, simularLlamadoDesdePanel, getMesas, liberarMesa, getPedidosDeMesa, registrarPago, actualizarEstadoPedido, getPagos, getPedidosTodos, API_URL } from '../services/api'
+import { Bell, FileText, ChevronLeft, RefreshCw, CheckCircle, Clock, Plus, Volume2, VolumeX, X, User, Utensils, LayoutGrid, ChefHat, ConciergeBell, Receipt, DollarSign, QrCode, Minus } from 'lucide-react'
+import { getAsistencias, atenderAsistencia, simularLlamadoDesdePanel, getMesas, liberarMesa, getPedidosDeMesa, registrarPago, actualizarEstadoPedido, getPagos, getPedidosTodos, getRestaurante, actualizarTiempoEspera, API_URL } from '../services/api'
 import { useToast } from '../components/Toast'
 
 export default function Logistica() {
@@ -27,6 +27,7 @@ export default function Logistica() {
   const [todosPedidos, setTodosPedidos] = useState([])
   const [ticketModalOpen, setTicketModalOpen] = useState(false)
   const [ticketSeleccionado, setTicketSeleccionado] = useState(null)
+  const [tiempoEsperaGlobal, setTiempoEsperaGlobal] = useState(15)
 
   const asistenciasPrevias = useRef(new Set())
 
@@ -70,11 +71,12 @@ export default function Logistica() {
   const cargarDatos = async (mostrarToast = false) => {
     try {
       const restId = idRestaurante
-      const [datosAsist, datosMesas, datosPagos, datosPedidos] = await Promise.all([
+      const [datosAsist, datosMesas, datosPagos, datosPedidos, datosRest] = await Promise.all([
         getAsistencias(restId),
         getMesas(restId),
         getPagos(restId),
-        getPedidosTodos(restId)
+        getPedidosTodos(restId),
+        getRestaurante(restId)
       ])
       
       // Procesar asistencias
@@ -95,6 +97,10 @@ export default function Logistica() {
       // Guardar pagos y pedidos globales
       setPagos(datosPagos || [])
       setTodosPedidos(datosPedidos || [])
+      
+      if (datosRest && datosRest.tiempo_espera_global) {
+        setTiempoEsperaGlobal(datosRest.tiempo_espera_global)
+      }
 
       // Actualizar mesa seleccionada si ya hay una abierta
       if (mesaSeleccionada) {
@@ -184,6 +190,27 @@ export default function Logistica() {
       cargarDatos()
     } catch (e) {
       toast('Error al liberar la mesa', 'error')
+    }
+  }
+
+  const handleSimularAction = async (tipo) => {
+    try {
+      await simularLlamadoDesdePanel(mesaSimulada, tipo)
+      toast(`Simulación: ${tipo === 'llamar_mesero' ? 'Llamar mozo' : 'Pedir cuenta'} - Mesa ${mesaSimulada}`, 'success')
+      cargarDatos()
+    } catch (e) {
+      toast('Error en simulación', 'error')
+    }
+  }
+
+  const handleActualizarTiempoEspera = async (nuevoTiempo) => {
+    if (nuevoTiempo < 5) return;
+    setTiempoEsperaGlobal(nuevoTiempo)
+    try {
+      await actualizarTiempoEspera(idRestaurante, nuevoTiempo)
+      toast(`Tiempo de espera actualizado a ${nuevoTiempo} min`, 'success')
+    } catch (e) {
+      toast('Error al actualizar tiempo', 'error')
     }
   }
 
@@ -418,10 +445,30 @@ export default function Logistica() {
 
     return (
       <div className="animate-fade-in">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-1)' }}>
-            Pantalla de Cocina (KDS)
-          </h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+          <div>
+            <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-1)' }}>
+              Pantalla de Cocina (KDS)
+            </h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
+              <span style={{ fontSize: '13px', color: 'var(--text-2)' }}>Tiempo de Espera Global:</span>
+              <div style={{ display: 'flex', alignItems: 'center', background: 'var(--surface-2)', borderRadius: '20px', padding: '4px' }}>
+                <button 
+                  onClick={() => handleActualizarTiempoEspera(tiempoEsperaGlobal - 5)}
+                  style={{ width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: 'var(--surface)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-sm)' }}
+                >
+                  <Minus size={14} />
+                </button>
+                <span style={{ margin: '0 12px', fontSize: '14px', fontWeight: 'bold' }}>{tiempoEsperaGlobal} min</span>
+                <button 
+                  onClick={() => handleActualizarTiempoEspera(tiempoEsperaGlobal + 5)}
+                  style={{ width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: 'var(--accent)', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-sm)' }}
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
+            </div>
+          </div>
           <span className="category-tab active" style={{ fontSize: '11px', padding: '4px 10px', background: 'var(--accent)' }}>
             {comandasCocina.length} Comandas en Espera
           </span>

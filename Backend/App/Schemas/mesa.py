@@ -8,6 +8,7 @@ class MesaCreate(BaseModel):
 class RestauranteMini(BaseModel):
     id_restaurante: int
     nombre: str
+    tiempo_espera_global: int = 15
 
     class Config:
         from_attributes = True
@@ -17,6 +18,8 @@ class MesaResponse(BaseModel):
     id_restaurante: int
     numero: int
     estado: str
+    pin: Optional[str] = None
+    tipo_pago: Optional[str] = None
     codigo_qr: Optional[str] = None
     token_sesion: Optional[str] = None
     restaurante: Optional[RestauranteMini] = None
@@ -24,6 +27,9 @@ class MesaResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class MesaConfigUpdate(BaseModel):
+    tipo_pago: str
 
 class MesaCreateResponse(MesaResponse):
     # Este sí incluye el pin: solo se devuelve una vez, justo al crear la

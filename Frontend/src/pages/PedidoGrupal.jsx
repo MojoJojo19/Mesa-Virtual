@@ -17,6 +17,7 @@ export default function PedidoGrupal() {
 
   const [comensales, setComensales] = useState([])
   const [enviando, setEnviando] = useState(false)
+  const [tipoPago, setTipoPago] = useState('no_decidido')
 
   // Polling de los comensales reales de la mesa
   useEffect(() => {
@@ -44,6 +45,9 @@ export default function PedidoGrupal() {
           localStorage.removeItem('swifttable_carrito')
           localStorage.removeItem('swifttable_user')
           navigate(`/mesa/${idMesa}`)
+        }
+        if (mesaInfo && mesaInfo.tipo_pago) {
+          setTipoPago(mesaInfo.tipo_pago)
         }
       } catch (e) {
         console.error(e)
@@ -122,10 +126,15 @@ export default function PedidoGrupal() {
         <div className="card-accent" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '16px 0', border: 'none' }}>
           <div>
             <div style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '4px' }}>Total de la Mesa</div>
-            <div style={{ fontSize: '28px', fontWeight: '800' }}>S/ {totalMesa.toFixed(2)}</div>
+            <div style={{ fontSize: '28px', fontWeight: '800', marginBottom: '8px' }}>S/ {totalMesa.toFixed(2)}</div>
+            {tipoPago === 'separado' ? (
+              <span style={{ fontSize: '11px', background: 'var(--surface)', padding: '4px 8px', borderRadius: '12px', fontWeight: 'bold', color: 'var(--text-1)', border: '1px solid var(--border)' }}>💳 Cuentas separadas</span>
+            ) : tipoPago === 'junto' ? (
+              <span style={{ fontSize: '11px', background: 'var(--text-1)', color: '#fff', padding: '4px 8px', borderRadius: '12px', fontWeight: 'bold' }}>💸 Pagar todo junto</span>
+            ) : null}
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '14px', fontWeight: '600' }}><Users size={14}/> {pedidosMesa.length} pers.</div>
+            <div style={{ fontSize: '14px', fontWeight: '600' }}><Users size={14}/> {comensales.length} pers.</div>
             <div style={{ fontSize: '14px', color: 'var(--text-2)', marginTop: '2px' }}>{totalItems} platos</div>
           </div>
         </div>

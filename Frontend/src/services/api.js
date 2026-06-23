@@ -109,6 +109,44 @@ export const getMesa = async (idMesa) => {
   }
 }
 
+export const actualizarConfigMesa = async (idMesa, tipoPago) => {
+  try {
+    const res = await fetchWithTimeout(`${API_URL}/mesas/${idMesa}/configuracion`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tipo_pago: tipoPago })
+    })
+    if (!res.ok) throw new Error('Error')
+    return await res.json()
+  } catch {
+    return { success: true, tipo_pago: tipoPago }
+  }
+}
+
+export const actualizarTiempoEspera = async (idRestaurante, minutos) => {
+  try {
+    const res = await fetchWithTimeout(`${API_URL}/restaurantes/${idRestaurante}/tiempo-espera`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ minutos })
+    })
+    if (!res.ok) throw new Error('Error')
+    return await res.json()
+  } catch {
+    return { success: true, tiempo_espera_global: minutos }
+  }
+}
+
+export const getRestaurante = async (idRestaurante) => {
+  try {
+    const res = await fetchWithTimeout(`${API_URL}/restaurantes/${idRestaurante}`)
+    if (!res.ok) throw new Error('Error')
+    return await res.json()
+  } catch {
+    return { id_restaurante: idRestaurante, tiempo_espera_global: 15 }
+  }
+}
+
 export const validarPin = async (idMesa, pin) => {
   try {
     const res = await fetchWithTimeout(`${API_URL}/mesas/${idMesa}/validar-pin`, {
@@ -350,7 +388,8 @@ const getMockMesasLocales = () => {
         { id_mesa: 4, numero: 4, estado: 'libre', pin: '8765', token_sesion: 'token4', comensales: [] },
         { id_mesa: 5, numero: 5, estado: 'ocupada', pin: '2468', token_sesion: 'token5', comensales: [{ nombre: 'Pedro', avatar: '🐶' }] },
         { id_mesa: 6, numero: 6, estado: 'libre', pin: '1357', token_sesion: 'token6', comensales: [] },
-        { id_mesa: 7, numero: 7, estado: 'ocupada', pin: '7823', token_sesion: 'token7', comensales: [{ nombre: 'Carlos', avatar: '🐱', isLider: true }, { nombre: 'Ana', avatar: '🐶' }] }
+        { id_mesa: 7, numero: 7, estado: 'ocupada', pin: '7823', token_sesion: 'token7', comensales: [{ nombre: 'Carlos', avatar: '🐱', isLider: true }, { nombre: 'Ana', avatar: '🐶' }] },
+        { id_mesa: 1001, numero: 1001, estado: 'libre', pin: '1111', token_sesion: 'token1001', comensales: [] }
       ];
       localStorage.setItem('swifttable_mock_mesas', JSON.stringify(iniciales));
       return iniciales;
