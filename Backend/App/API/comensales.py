@@ -15,6 +15,16 @@ def crear_comensal(datos: ComensalCreate, db: Session = Depends(get_db)):
     if not mesa:
         raise HTTPException(status_code=404, detail="Mesa no encontrada")
     
+    # Validar nombre único en sesión activa
+    comensal_existente = db.query(Comensal).filter(
+        Comensal.id_mesa == datos.id_mesa,
+        Comensal.estado_sesion == EstadoSesion.activa,
+        Comensal.nombre.ilike(datos.nombre)
+    ).first()
+    
+    if comensal_existente:
+        raise HTTPException(status_code=400, detail="Este nombre ya está en uso en esta mesa.")
+    
     # Cambiar el estado de la mesa a 'ocupada' al ingresar el comensal (HU-01)
     mesa.estado = EstadoMesa.ocupada
     
@@ -66,6 +76,30 @@ def actualizar_carrito_comensal(id_comensal: int, datos: ComensalCarritoUpdate, 
     
     item.estado_pedido = datos.estado_pedido
     item.carrito = datos.carrito
+    db.commit()
+    db.refresh(item)
+    return item
+
+@router.put("/{id_comensal}/hacer-lider", response_model=ComensalResponse)
+def hacer_lider(id_comensal: int, db: Session = Depends(get_db)):
+    """
+    Asigna a este comensal como líder de la mesa si es que la mesa aún no tiene líder.
+    """
+    item = db.query(Comensal).filter(Comensal.id_comensal == id_comensal).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Comensal no encontrado")
+    
+    # Verificar si ya hay un líder activo en esta mesa
+    lider_existente = db.query(Comensal).filter(
+        Comensal.id_mesa == item.id_mesa,
+        Comensal.is_lider == True,
+        Comensal.estado_sesion == EstadoSesion.activa
+    ).first()
+    
+    if lider_existente:
+        raise HTTPException(status_code=400, detail="La mesa ya tiene un líder asignado.")
+    
+    item.is_lider = True
     db.commit()
     db.refresh(item)
     return item

@@ -38,21 +38,24 @@ export default function Ingreso() {
     }
 
     setCargando(true)
-    const nuevoComensal = await crearComensal(nombre.trim(), avatar, idMesa)
-    setCargando(false)
-
-    if (nuevoComensal) {
-      localStorage.setItem('swifttable_user', JSON.stringify({
-        id: nuevoComensal.id_comensal,
-        nombre: nuevoComensal.nombre,
-        avatar: nuevoComensal.avatar,
-        idMesa,
-        isLider: true, 
-        modoPago: 'individual' 
-      }))
-      navigate(`/mesa/${idMesa}/lobby`)
-    } else {
-      toast('Error al ingresar', 'error')
+    try {
+      const nuevoComensal = await crearComensal(nombre.trim(), avatar, idMesa)
+      setCargando(false)
+      
+      if (nuevoComensal) {
+        localStorage.setItem('swifttable_user', JSON.stringify({
+          id: nuevoComensal.id_comensal,
+          nombre: nuevoComensal.nombre,
+          avatar: nuevoComensal.avatar,
+          idMesa,
+          isLider: false, 
+          modoPago: 'individual' 
+        }))
+        navigate(`/mesa/${idMesa}/lobby`)
+      }
+    } catch (e) {
+      setCargando(false)
+      toast(e.message || 'Error al ingresar', 'error')
     }
   }
 

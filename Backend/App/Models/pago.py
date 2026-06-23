@@ -21,8 +21,10 @@ class Pago(Base):
     fecha_pago = Column(DateTime, server_default=func.now())
 
     id_pedido = Column(Integer, ForeignKey("pedidos.id_pedido"), unique=True, nullable=False)
+    id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario", ondelete="SET NULL"), nullable=True)
 
     # Relaciones
     restaurante = relationship("Restaurante", back_populates="pagos")
     pedido = relationship("Pedido", back_populates="pago")
+    usuario = relationship("Usuario", back_populates="pagos")
     

@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ChevronLeft, Smartphone, CreditCard, Banknote } from 'lucide-react'
-import { pedirCuenta, registrarPago, enviarPedido, getPedidosDeMesa } from '../services/api'
+import { pedirCuenta, registrarPago, enviarPedido, getPedidosDeMesa, getComensalesDeMesa } from '../services/api'
 import { useToast } from '../components/Toast'
 
 const METODOS_PAGO = [
@@ -20,6 +20,20 @@ export default function Resumen() {
   const [propinaOtros, setPropinaOtros] = useState('')
   const [solicitando, setSolicitando] = useState(false)
   const [pagando, setPagando] = useState(false)
+  const [comensales, setComensales] = useState([])
+
+  React.useEffect(() => {
+    const fetchComensales = async () => {
+      try {
+        const data = await getComensalesDeMesa(idMesa)
+        const activos = (data || []).filter(c => c.estado_sesion === 'activa')
+        setComensales(activos)
+      } catch (err) {
+        console.error(err)
+      }
+    }
+    fetchComensales()
+  }, [idMesa])
 
   const handlePedirCuenta = async () => {
     setSolicitando(true)
@@ -39,14 +53,13 @@ export default function Resumen() {
   const miCarrito = JSON.parse(localStorage.getItem('swifttable_carrito') || '[]')
   const miTotal = miCarrito.reduce((s, p) => s + Number(p.precio || 0) * (p.cantidad || 1), 0)
 
-  const pedidosMesa = [
-    { nombre: user.nombre, isLider: user.isLider, precio: miTotal },
-    { nombre: 'Ana', isLider: false, precio: 32.00 },
-    { nombre: 'Luis', isLider: false, precio: 18.00 },
-  ]
+  const totalMesa = comensales.reduce((sum, c) => {
+    const cart = Array.isArray(c.carrito) ? c.carrito : []
+    return sum + cart.reduce((s, i) => s + (Number(i.precio || 0) * (i.cantidad || 1)), 0)
+  }, 0)
 
   const subtotal = (isLider && user.modoPago === 'lider')
-    ? pedidosMesa.reduce((s, p) => s + p.precio, 0)
+    ? totalMesa || miTotal // fallback a miTotal si totalMesa es 0 (ej. cargando)
     : miTotal
 
   const servicio = subtotal * 0.10

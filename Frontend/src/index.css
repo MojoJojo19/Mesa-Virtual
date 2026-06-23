@@ -91,6 +91,10 @@ body {
   overscroll-behavior-y: none; /* Evita el "pull to refresh" del navegador por defecto */
 }
 
+button, input, select, textarea {
+  font-family: inherit;
+}
+
 /* ==============================
    APP CONTAINER NATIVO
    ============================== */

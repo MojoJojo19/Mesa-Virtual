@@ -403,7 +403,8 @@ export default function Logistica() {
         {[
           { id: 'salon', label: 'Salón', icon: ConciergeBell },
           { id: 'cocina', label: 'Cocina', icon: ChefHat },
-          { id: 'caja', label: 'Caja', icon: Receipt }
+          { id: 'caja', label: 'Caja', icon: Receipt },
+          { id: 'historial', label: 'Historial', icon: FileText }
         ].map(mode => {
           const Icon = mode.icon
           const active = vistaModo === mode.id
@@ -672,7 +673,7 @@ export default function Logistica() {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         zIndex: 9999, padding: '24px'
       }}>
-        <div className="card animate-pop" style={{ maxWidth: '380px', width: '100%', padding: '24px', margin: 0, background: '#fff', color: '#000', border: '2px dashed #94a3b8', fontFamily: 'monospace', boxShadow: 'var(--shadow-md)' }}>
+        <div className="card animate-pop" style={{ maxWidth: '380px', width: '100%', padding: '24px', margin: 0, background: '#fff', color: '#000', border: '2px dashed #94a3b8', fontFamily: 'inherit', boxShadow: 'var(--shadow-md)' }}>
           <div style={{ textAlign: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '800', margin: '0 0 4px', color: '#0f172a', fontFamily: 'var(--font-display)' }}>LA FOGATA S.A.C.</h3>
             <p style={{ fontSize: '11px', margin: '2px 0', color: 'var(--text-2)' }}>AV. UNIVERSITARIA 1801, LIMA</p>
@@ -759,6 +760,114 @@ export default function Logistica() {
     )
   }
 
+  const renderHistorial = () => {
+    const comandasHistorial = todosPedidos
+      .filter(p => p.estado === 'pagado' || p.estado === 'cancelado')
+      .sort((a, b) => new Date(b.fecha_hora) - new Date(a.fecha_hora))
+
+    return (
+      <div className="animate-fade-in">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+          <div>
+            <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-1)' }}>
+              Historial de Pedidos
+            </h2>
+            <p style={{ fontSize: '13px', color: 'var(--text-2)' }}>
+              {comandasHistorial.length} pedidos finalizados
+            </p>
+          </div>
+        </div>
+
+        {comandasHistorial.length === 0 ? (
+          <div className="card text-center" style={{ padding: '40px 20px', background: 'var(--surface)' }}>
+            <div style={{ color: 'var(--text-3)', marginBottom: '8px' }}>
+              <FileText size={32} />
+            </div>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-2)' }}>
+              No hay pedidos en el historial
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {comandasHistorial.map(ped => {
+              const isExpanded = ticketSeleccionado?.id_pedido === ped.id_pedido
+              const fecha = new Date(ped.fecha_hora)
+              const formatFecha = `${fecha.toLocaleDateString()} ${fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+              const totalItems = ped.items?.reduce((s, i) => s + (i.cantidad || 1), 0) || 0
+              const totalPrecio = ped.items?.reduce((s, i) => s + (Number(i.precio || 0) * (i.cantidad || 1)), 0) || 0
+
+              return (
+                <div key={ped.id_pedido} className="card animate-pop" style={{ padding: '0', overflow: 'hidden' }}>
+                  <div 
+                    style={{ 
+                      padding: '16px', 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      background: 'var(--surface)'
+                    }}
+                    onClick={() => isExpanded ? setTicketSeleccionado(null) : setTicketSeleccionado(ped)}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-1)' }}>
+                          Mesa {ped.id_mesa}
+                        </span>
+                        <span style={{ 
+                          fontSize: '11px', 
+                          padding: '2px 8px', 
+                          borderRadius: '12px', 
+                          fontWeight: '700',
+                          background: ped.estado === 'pagado' ? 'var(--green-bg)' : 'var(--red-bg)',
+                          color: ped.estado === 'pagado' ? 'var(--green)' : 'var(--red)',
+                          textTransform: 'uppercase'
+                        }}>
+                          {ped.estado}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '13px', color: 'var(--text-2)' }}>
+                        <Clock size={12} style={{ display: 'inline', marginRight: '4px', verticalAlign: '-2px' }}/>
+                        {formatFecha}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-1)' }}>
+                        S/ {totalPrecio.toFixed(2)}
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-3)' }}>
+                        {totalItems} items
+                      </div>
+                    </div>
+                  </div>
+
+                  {isExpanded && (
+                    <div style={{ borderTop: '1px dashed var(--border-2)', background: 'var(--bg)', padding: '16px' }}>
+                      <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-2)', textTransform: 'uppercase', marginBottom: '12px' }}>
+                        Detalle del Pedido #{ped.id_pedido}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {(ped.items || []).map((it, idx) => (
+                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
+                            <div style={{ display: 'flex', gap: '8px', color: 'var(--text-1)' }}>
+                              <span style={{ fontWeight: '600' }}>{it.cantidad}x</span>
+                              <span>{it.nombre}</span>
+                            </div>
+                            <span style={{ color: 'var(--text-2)' }}>S/ {(Number(it.precio) * it.cantidad).toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   const renderPlatosListosSalon = () => {
     const listos = todosPedidos.filter(p => p.estado === 'listo_para_servir')
     if (listos.length === 0) return null
@@ -839,6 +948,8 @@ export default function Logistica() {
         {vistaModo === 'cocina' && renderCocinaKDS()}
         
         {vistaModo === 'caja' && renderCajaRegistradora()}
+
+        {vistaModo === 'historial' && renderHistorial()}
 
         {vistaModo === 'salon' && (
           <>
@@ -1090,8 +1201,33 @@ export default function Logistica() {
                   )}
                 </div>
 
-                {/* Resumen de Caja y Acciones de Cierre */}
-                {pedidosMesa.length > 0 && (() => {
+                {/* Acciones de Cierre */}
+                {(pedidosMesa.length > 0 || mesaSeleccionada.estado === 'ocupada') && (() => {
+                  if (pedidosMesa.length === 0) {
+                    return (
+                      <div style={{ marginTop: '16px', background: 'var(--surface-2)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                        <div style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '16px', textAlign: 'center' }}>
+                          La mesa está ocupada pero no tiene pedidos registrados.
+                        </div>
+                        <button
+                          onClick={() => handleLiberarMesa(mesaSeleccionada.id_mesa)}
+                          className="wf-btn-solid"
+                          style={{
+                            background: 'var(--red)',
+                            boxShadow: 'none',
+                            fontSize: '15px',
+                            padding: '14px',
+                            borderRadius: '12px',
+                            width: '100%',
+                            margin: 0
+                          }}
+                        >
+                          Cerrar Mesa sin Consumo y Liberar
+                        </button>
+                      </div>
+                    )
+                  }
+
                   const subtotal = pedidosMesa.reduce((acc, ped) => {
                     return acc + ped.items.reduce((s, it) => s + (Number(it.precio) * it.cantidad), 0)
                   }, 0)

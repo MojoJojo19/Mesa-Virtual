@@ -27,3 +27,4 @@ class Usuario(Base):
     # Relaciones
     restaurante = relationship("Restaurante", back_populates="usuarios")
     pedidos = relationship("Pedido", back_populates="usuario")
+    pagos = relationship("Pago", back_populates="usuario")

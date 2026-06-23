@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Enum, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, Enum, ForeignKey, JSON, Boolean
 from sqlalchemy.orm import relationship
 from App.DataBase.connection import Base
 import enum
@@ -18,6 +18,8 @@ class Comensal(Base):
 
     # index=True: se filtra constantemente "dame los comensales de esta mesa" (lobby)
     id_mesa = Column(Integer, ForeignKey("mesas.id_mesa"), nullable=False, index=True)
+
+    is_lider = Column(Boolean, default=False)
 
     # Estado temporal de compra
     estado_pedido = Column(String(20), default="eligiendo") # "eligiendo" o "listo"

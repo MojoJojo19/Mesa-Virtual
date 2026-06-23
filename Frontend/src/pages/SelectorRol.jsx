@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Flame, Shield, Delete, X, AlertCircle } from 'lucide-react'
 import { useToast } from '../components/Toast'
-import { buscarMesaPorPin } from '../services/api'
+import { buscarMesaPorPin, loginPersonal } from '../services/api'
 
 export default function SelectorRol() {
   const navigate = useNavigate()
@@ -15,7 +15,8 @@ export default function SelectorRol() {
 
   // ── Estado del panel de Personal ──────────────────────────────────────────
   const [mostrarPanelStaff, setMostrarPanelStaff] = useState(false)
-  const [pinPersonal, setPinPersonal] = useState('')
+  const [correo, setCorreo] = useState('')
+  const [contrasena, setContrasena] = useState('')
   const [staffError, setStaffError] = useState(false)
 
   // ── Limpiar caché de desarrollo (solo primera vez) ────────────────────────
@@ -71,22 +72,23 @@ export default function SelectorRol() {
   }
 
   // ── Lógica del panel de Personal ──────────────────────────────────────────
-  const handleEntrarComoPersonal = (e) => {
+  const handleEntrarComoPersonal = async (e) => {
     e.preventDefault()
-    if (pinPersonal === '1234') {
-      localStorage.setItem('swifttable_id_restaurante', '1')
-      localStorage.setItem('swifttable_nombre_restaurante', 'La Fogata')
-      toast('Acceso concedido — La Fogata', 'success')
+    try {
+      const data = await loginPersonal(correo, contrasena)
+      localStorage.setItem('swifttable_staff_token', data.access_token)
+      localStorage.setItem('swifttable_staff_user', JSON.stringify({
+        id_usuario: data.id_usuario,
+        rol: data.rol,
+        correo: correo
+      }))
+      localStorage.setItem('swifttable_id_restaurante', data.id_restaurante)
+      localStorage.setItem('swifttable_nombre_restaurante', data.nombre_restaurante)
+      toast(`Acceso concedido — ${data.nombre_restaurante}`, 'success')
       navigate('/logistica')
-    } else if (pinPersonal === '4321') {
-      localStorage.setItem('swifttable_id_restaurante', '2')
-      localStorage.setItem('swifttable_nombre_restaurante', 'Pizzería Italia')
-      toast('Acceso concedido — Pizzería Italia', 'success')
-      navigate('/logistica')
-    } else {
+    } catch (err) {
       setStaffError(true)
-      setPinPersonal('')
-      toast('PIN de personal incorrecto.', 'error')
+      toast('Credenciales incorrectas.', 'error')
       setTimeout(() => setStaffError(false), 1500)
     }
   }
@@ -119,7 +121,7 @@ export default function SelectorRol() {
               Acceso Personal
             </h1>
             <p style={{ fontSize: '13px', color: 'var(--text-3)', fontWeight: '500' }}>
-              Ingresa tu PIN de empleado
+              Ingresa tus credenciales
             </p>
           </div>
 
@@ -128,40 +130,42 @@ export default function SelectorRol() {
             padding: '24px', borderRadius: '20px',
             background: 'var(--surface)', border: '1.5px solid var(--border)'
           }}>
+            <div style={{ marginBottom: '16px' }}>
+              <input
+                type="email"
+                placeholder="Correo electrónico"
+                value={correo}
+                autoFocus
+                onChange={(e) => setCorreo(e.target.value)}
+                style={{
+                  width: '100%', padding: '14px', borderRadius: '12px',
+                  background: 'var(--bg)', border: '2px solid var(--border)',
+                  color: 'var(--text-1)', fontSize: '15px', outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
             <div style={{ marginBottom: '20px', position: 'relative' }}>
               <input
                 type="password"
-                maxLength={4}
-                placeholder="••••"
-                value={pinPersonal}
-                autoFocus
-                onChange={(e) => setPinPersonal(e.target.value.replace(/\D/g, ''))}
+                placeholder="Contraseña"
+                value={contrasena}
+                onChange={(e) => setContrasena(e.target.value)}
                 style={{
-                  width: '100%',
-                  padding: '18px',
-                  letterSpacing: '14px',
-                  textAlign: 'center',
-                  borderRadius: '14px',
+                  width: '100%', padding: '14px', borderRadius: '12px',
                   background: staffError ? 'var(--red-bg, #fef2f2)' : 'var(--bg)',
-                  border: staffError
-                    ? '2px solid var(--red, #ef4444)'
-                    : '2px solid var(--border)',
-                  color: 'var(--text-1)',
-                  fontSize: '26px',
-                  fontWeight: '800',
-                  outline: 'none',
-                  fontFamily: 'inherit',
-                  transition: 'border-color 0.15s, background 0.15s',
+                  border: staffError ? '2px solid var(--red, #ef4444)' : '2px solid var(--border)',
+                  color: 'var(--text-1)', fontSize: '15px', outline: 'none',
                   boxSizing: 'border-box'
                 }}
               />
               {staffError && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px', color: 'var(--red, #ef4444)', fontSize: '13px', fontWeight: '600' }}>
-                  <AlertCircle size={14} /> PIN incorrecto
+                  <AlertCircle size={14} /> Credenciales inválidas
                 </div>
               )}
-              <span style={{ fontSize: '11px', color: 'var(--text-3)', display: 'block', textAlign: 'center', marginTop: '6px' }}>
-                Demo: 1234 (La Fogata) · 4321 (Pizzería Italia)
+              <span style={{ fontSize: '11px', color: 'var(--text-3)', display: 'block', textAlign: 'center', marginTop: '8px' }}>
+                Demo: mesero@fogata.com / admin@fogata.com
               </span>
             </div>
 

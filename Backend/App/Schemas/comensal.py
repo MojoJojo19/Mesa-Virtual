@@ -14,6 +14,7 @@ class ComensalResponse(BaseModel):
     id_mesa: int
     estado_pedido: Optional[str] = "eligiendo"
     carrito: Optional[List[Any]] = []
+    is_lider: bool = False
 
     class Config:
         from_attributes = True
