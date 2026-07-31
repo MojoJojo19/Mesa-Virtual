@@ -25,4 +25,26 @@ class Pago(Base):
     # Relaciones
     restaurante = relationship("Restaurante", back_populates="pagos")
     pedido = relationship("Pedido", back_populates="pago")
+
+    # --- Datos derivados del pedido ---
+    # La caja y la boleta necesitan saber de qué mesa salió el pago y qué se
+    # consumió. Ambos viven en el pedido, así que se exponen desde aquí en vez
+    # de duplicar columnas en la tabla de pagos.
+
+    @property
+    def id_mesa(self):
+        return self.pedido.id_mesa if self.pedido else None
+
+    @property
+    def items(self):
+        if not self.pedido:
+            return []
+        return [
+            {
+                "nombre": d.producto.nombre if d.producto else "Producto #%s" % d.id_producto,
+                "cantidad": d.cantidad,
+                "precio": d.precio_unitario,
+            }
+            for d in self.pedido.detalles
+        ]
     

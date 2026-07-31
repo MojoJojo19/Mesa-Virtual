@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#150a24; font-family:'Outfit',system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+  a { color:#23D5E0; text-decoration:none; }
+  a:hover { color:#B8F14E; }
+  @keyframes st-pop { 0% { opacity:0; transform:scale(.7) translateY(14px) } 60% { opacity:1; transform:scale(1.06) translateY(-3px) } 100% { opacity:1; transform:scale(1) translateY(0) } }
+  @keyframes st-float { 0%,100% { transform:translateY(0) rotate(-2deg) } 50% { transform:translateY(-7px) rotate(2deg) } }
+  @keyframes st-dash { to { background-position:56px 0 } }
+  @keyframes st-glow { 0%,100% { opacity:.35 } 50% { opacity:.9 } }
+</style>
+</helmet>
+
+<section style="display:flex;flex-direction:column;gap:30px;padding:56px 64px 110px">
+  <div id="1a" style="display:flex;flex-direction:column;gap:34px">
+
+    <div style="display:flex;align-items:flex-start;gap:18px;max-width:1080px">
+      <div style="font:500 12px 'JetBrains Mono',monospace;color:#150a24;background:#B8F14E;padding:5px 10px;border-radius:7px">1a</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:56px;line-height:1;color:#fff;letter-spacing:-.02em">SwiftTable — modo sala</div>
+        <div style="font-size:17px;line-height:1.55;color:#b9a8d4;max-width:760px;text-wrap:pretty">El flujo del comensal tratado como una sala en vivo: cada persona entra con PIN, aparece como tile de color, y la mesa avanza junta. Un único token de color por restaurante viste las 10 pantallas, así el mismo sistema sirve para cualquier local.</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(230px,1fr));gap:18px;max-width:1240px">
+      <div style="background:#241038;border:2px solid #3b1f57;border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:13px">
+        <div style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:.1em;color:#8e79b3">PALETA DE SALA</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+          <div style="height:42px;border-radius:12px;background:var(--st-accent,#FF4E5B)"></div>
+          <div style="height:42px;border-radius:12px;background:#B8F14E"></div>
+          <div style="height:42px;border-radius:12px;background:#23D5E0"></div>
+          <div style="height:42px;border-radius:12px;background:#FFC02E"></div>
+          <div style="height:42px;border-radius:12px;background:#7A3DF5"></div>
+          <div style="height:42px;border-radius:12px;background:#150a24"></div>
+        </div>
+        <div style="font-size:13px;line-height:1.45;color:#b9a8d4">Fondo aubergine fijo + 5 colores de tile. El acento del local reemplaza solo el coral.</div>
+      </div>
+      <div style="background:#241038;border:2px solid #3b1f57;border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:8px">
+        <div style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:.1em;color:#8e79b3">TIPOGRAFÍA</div>
+        <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:36px;line-height:1.05;color:#fff">Baloo 2</div>
+        <div style="font-size:13px;color:#8e79b3;margin-top:-4px">Titulares, cifras, nombre del local</div>
+        <div style="font-weight:700;font-size:21px;color:#fff;margin-top:8px">Outfit</div>
+        <div style="font-size:13px;color:#8e79b3;margin-top:-3px">Copy e interfaz</div>
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B8F14E;margin-top:8px">MESA 12 · PIN 4D</div>
+      </div>
+      <div style="background:#241038;border:2px solid #3b1f57;border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:11px">
+        <div style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:.1em;color:#8e79b3">COMPONENTES</div>
+        <div style="background:#B8F14E;color:#150a24;border-radius:16px;padding:13px;text-align:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:17px;box-shadow:0 5px 0 #8ac024">Acción principal</div>
+        <div style="background:#241038;border:2px solid #6b4b93;color:#fff;border-radius:16px;padding:11px;text-align:center;font-weight:700;font-size:15px">Secundaria</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div style="width:36px;height:36px;border-radius:12px;background:#FFC02E;color:#150a24;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:17px">C</div>
+          <div style="width:36px;height:36px;border-radius:12px;background:#23D5E0;color:#150a24;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:17px">A</div>
+          <div style="background:#FFC02E;color:#150a24;border-radius:999px;padding:5px 11px;font:500 11px 'JetBrains Mono',monospace">ANFITRIÓN</div>
+        </div>
+      </div>
+      <div style="background:var(--st-accent,#FF4E5B);border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:11px">
+        <div style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:.1em;color:rgba(21,10,36,.6)">CORREGIDO EN ESTA PASADA</div>
+        <div style="display:flex;flex-direction:column;gap:9px;font-size:13.5px;line-height:1.45;color:#2b0d12;font-weight:500">
+          <div>El pie del tracking usa el nombre dinámico del local, no “La Fogata” fijo.</div>
+          <div>El alert() del pago pasa a hoja de confirmación + toast.</div>
+          <div>Cero emojis: avatares de monograma en tile de color, iconos de una sola familia.</div>
+          <div>Barra de 3 pasos reincorporada en todo el tramo de acceso.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:40px 32px;padding-top:6px">
+      <div data-screen-label="01 Bienvenida" style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:9px"><span style="font:500 11px 'JetBrains Mono',monospace;color:#B8F14E">01</span><span style="font-weight:700;font-size:14px;color:#b9a8d4">Bienvenida · post-QR</span></div>
+        <div style="width:390px;height:812px;border-radius:46px;padding:9px;background:#2b1544;box-shadow:0 34px 70px -30px rgba(0,0,0,.75)">
+          <div style="width:100%;height:100%;border-radius:38px;overflow:hidden;background:#1E0F33;display:flex;flex-direction:column;position:relative">
+            <div style="position:absolute;top:-90px;right:-70px;width:280px;height:280px;border-radius:50%;background:var(--st-accent,#FF4E5B);filter:blur(60px);opacity:.4"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 26px 4px;font:500 13px 'JetBrains Mono',monospace;color:#fff;position:relative">
+              <span>19:42</span>
+              <span style="display:flex;gap:5px;align-items:center"><span style="width:15px;height:9px;border-radius:2px;background:#fff"></span><span style="width:22px;height:10px;border-radius:3px;border:1.5px solid #fff"></span></span>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;padding:16px 22px 24px;position:relative">
+              <div style="display:flex;align-items:center;gap:11px">
+                <div style="width:48px;height:48px;border-radius:15px;background:var(--st-accent,#FF4E5B);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:26px;box-shadow:0 4px 0 rgba(0,0,0,.3)">{{ inicial }}</div>
+                <div style="display:flex;flex-direction:column;gap:2px">
+                  <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:22px;line-height:1;color:#fff">{{ nombre }}</div>
+                  <div style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:.09em;color:#8e79b3">MESA {{ mesa }} · SALA ABIERTA</div>
+                </div>
+              </div>
+              <div style="margin-top:34px;display:flex;flex-direction:column;align-items:center;gap:18px">
+                <div style="display:flex;gap:10px;align-items:center">
+                  <div style="width:52px;height:52px;border-radius:16px;background:#FFC02E;color:#150a24;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:24px;animation:st-float 3.4s ease-in-out infinite">C</div>
+                  <div style="width:52px;height:52px;border-radius:16px;background:#23D5E0;color:#150a24;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:24px;animation:st-float 3.4s ease-in-out .5s infinite">A</div>
+                  <div style="width:52px;height:52px;border-radius:16px;background:#B8F14E;color:#150a24;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:24px;animation:st-float 3.4s ease-in-out 1s infinite">L</div>
+                  <div style="width:52px;height:52px;border-radius:16px;border:2px dashed #6b4b93;color:#8e79b3;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:24px">+</div>
+                </div>
+                <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:44px;line-height:1.02;color:#fff;text-align:center;text-wrap:balance">¡Su mesa<br>ya está lista!</div>
+                <div style="font-size:15.5px;line-height:1.5;color:#b9a8d4;text-align:center;text-wrap:pretty;max-width:290px">Pidan juntos desde el celular, vean lo que eligió cada uno y dividan la cuenta como quieran.</div>
+              </div>
+              <div style="margin-top:26px;background:#2b1544;border:2px solid #3b1f57;border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:12px">
+                <div style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:.09em;color:#8e79b3">CÓMO FUNCIONA</div>
+                <div style="display:flex;gap:12px;align-items:center"><div style="width:28px;height:28px;border-radius:9px;background:var(--st-accent,#FF4E5B);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0">1</div><div style="font-size:14.5px;color:#e9e1f5;font-weight:500">Entran con el PIN del centro de mesa</div></div>
+                <div style="display:flex;gap:12px;align-items:center"><div style="width:28px;height:28px;border-radius:9px;background:#7A3DF5;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0">2</div><div style="font-size:14.5px;color:#e9e1f5;font-weight:500">Cada uno arma su pedido</div></div>
+                <div style="display:flex;gap:12px;align-items:center"><div style="width:28px;height:28px;border-radius:9px;background:#B8F14E;color:#150a24;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0">3</div><div style="font-size:14.5px;color:#e9e1f5;font-weight:500">Mandan todo a cocina de una vez</div></div>
+              </div>
+              <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px">
+                <div style="background:#B8F14E;color:#150a24;border-radius:20px;padding:19px;text-align:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:20px;box-shadow:0 6px 0 #8ac024">Ingresar a la mesa</div>
+                <div style="text-align:center;font:500 11px 'JetBrains Mono',monospace;letter-spacing:.07em;color:#8e79b3">SIN DESCARGAR NADA · SIN CREAR CUENTA</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div data-screen-label="02 PIN de mesa" style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:9px"><span style="font:500 11px 'JetBrains Mono',monospace;color:#B8F14E">02</span><span style="font-weight:700;font-size:14px;color:#b9a8d4">PIN de mesa</span></div>
+        <div style="width:390px;height:812px;border-radius:46px;padding:9px;background:#2b1544;box-shadow:0 34px 70px -30px rgba(0,0,0,.75)">
+          <div style="width:100%;height:100%;border-radius:38px;overflow:hidden;background:#7A3DF5;display:flex;flex-direction:column">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 26px 4px;font:500 13px 'JetBrains Mono',monospace;color:#fff">
+              <span>19:42</span>
+              <span style="display:flex;gap:5px;align-items:center"><span style="width:15px;height:9px;border-radius:2px;background:#fff"></span><span style="width:22px;height:10px;border-radius:3px;border:1.5px solid #fff"></span></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 20px 0">
+              <div style="width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.16);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">‹</div>
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:17px;color:#fff;line-height:1">{{ nombre }}</div>
+                <div style="font:500 10px 'JetBrains Mono',monospace;letter-spacing:.09em;color:rgba(255,255,255,.65)">MESA {{ mesa }}</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;padding:22px 22px 0">
+              <div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:6px;border-radius:999px;background:#B8F14E"></div><div style="font:500 10px 'JetBrains Mono',monospace;color:#fff">PIN</div></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:6px;border-radius:999px;background:rgba(255,255,255,.28)"></div><div style="font:500 10px 'JetBrains Mono',monospace;color:rgba(255,255,255,.6)">PERFIL</div></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:6px;border-radius:999px;background:rgba(255,255,255,.28)"></div><div style="font:500 10px 'JetBrains Mono',monospace;color:rgba(255,255,255,.6)">SALA</div></div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;padding:26px 22px 24px">
+              <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:34px;line-height:1.05;color:#fff;text-align:center">Escriban el PIN<br>de la mesa</div>
+              <div style="margin-top:8px;font-size:14.5px;color:rgba(255,255,255,.8);text-align:center">4 dígitos, están en el acrílico del centro</div>
+              <div style="margin:28px auto 0;display:flex;gap:12px">
+                <div style="width:56px;height:66px;border-radius:16px;background:#fff;color:#150a24;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:32px;box-shadow:0 5px 0 rgba(0,0,0,.22)">4</div>
+                <div style="width:56px;height:66px;border-radius:16px;background:#fff;color:#150a24;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:32px;box-shadow:0 5px 0 rgba(0,0,0,.22)">9</div>
+                <div style="width:56px;height:66px;border-radius:16px;background:rgba(255,255,255,.2);border:2px solid #B8F14E;display:flex;align-items:center;justify-content:center"><div style="width:3px;height:30px;background:#B8F14E;animation:st-glow 1.1s ease-in-out infinite"></div></div>
+                <div style="width:56px;height:66px;border-radius:16px;background:rgba(255,255,255,.14)"></div>
+              </div>
+              <div style="margin-top:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:11px">
+                <div style="height:62px;border-radius:18px;background:rgba(255,255,255,.16);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:700;font-size:28px;box-shadow:0 4px 0 rgba(0,0,0,.18)">1</div>
+                <div style="height:62px;border-radius:18px;background:rgba(255,255,255,.16);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:700;font-size:28px;box-shadow:0 4px 0 rgba(0,0,0,.18)">2</div>
+                <div style="height:62px;border-radius:18px;background:rgba(255,255,255,.16);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:700;font-size:28px;box-shadow:0 4px 0 rgba(0,0,0,.18)">3</div>
+                <div style="height:62px;border-radius:18px;background:rgba(255,255,255,.16);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:700;font-size:28px;box-shadow:0 4px 0 rgba(0,0,0,.18)">4</div>
+                <div style="height:62px;border-radius:18px;background:rgba(255,255,255,.16);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:700;font-size:28px;box-shadow:0 4px 0 rgba(0,0,0,.18)">5</div>
+                <div style="height:62px;border-radius:18px;background:rgba(255,255,255,.16);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:700;font-size:28px;box-shadow:0 4px 0 rgba(0,0,0,.18)">6</div>
+                <div style="height:62px;border-radius:18px;background:rgba(255,255,255,.16);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:700;font-size:28px;box-shadow:0 4px 0 rgba(0,0,0,.18)">7</div>
+                <div style="height:62px;border-radius:18px;background:rgba(255,255,255,.16);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:700;font-size:28px;box-shadow:0 4px 0 rgba(0,0,0,.18)">8</div>
+                <div style="height:62px;border-radius:18px;background:rgba(255,255,255,.16);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:700;font-size:28px;box-shadow:0 4px 0 rgba(0,0,0,.18)">9</div>
+                <div style="height:62px;border-radius:18px;background:transparent"></div>
+                <div style="height:62px;border-radius:18px;background:rgba(255,255,255,.16);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:700;font-size:28px;box-shadow:0 4px 0 rgba(0,0,0,.18)">0</div>
+                <div style="height:62px;border-radius:18px;background:rgba(21,10,36,.35);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700">⌫</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-screen-label="03 Acceso confirmado" style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:9px"><span style="font:500 11px 'JetBrains Mono',monospace;color:#B8F14E">03</span><span style="font-weight:700;font-size:14px;color:#b9a8d4">Acceso confirmado · 2s</span></div>
+        <div style="width:390px;height:812px;border-radius:46px;padding:9px;background:#2b1544;box-shadow:0 34px 70px -30px rgba(0,0,0,.75)">
+          <div style="width:100%;height:100%;border-radius:38px;overflow:hidden;background:#B8F14E;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;position:relative">
+            <div style="position:absolute;top:15px;left:26px;right:26px;display:flex;justify-content:space-between;font:500 13px 'JetBrains Mono',monospace;color:#150a24">
+              <span>19:43</span>
+              <span style="display:flex;gap:5px;align-items:center"><span style="width:15px;height:9px;border-radius:2px;background:#150a24"></span><span style="width:22px;height:10px;border-radius:3px;border:1.5px solid #150a24"></span></span>
+            </div>
+            <div style="width:120px;height:120px;border-radius:38px;background:#150a24;display:flex;align-items:center;justify-content:center;animation:st-pop .55s cubic-bezier(.34,1.56,.64,1) both;box-shadow:0 10px 0 rgba(0,0,0,.18)">
+              <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#B8F14E" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>
+            </div>
+            <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:46px;line-height:1;color:#150a24;text-align:center">¡Estás dentro!</div>
+            <div style="font-size:17px;font-weight:600;color:#2f4410;text-align:center;max-width:280px;text-wrap:pretty">Mesa {{ mesa }} de {{ nombre }} verificada. Armando tu perfil…</div>
+            <div style="width:180px;height:8px;border-radius:999px;background:rgba(21,10,36,.16);overflow:hidden;position:relative">
+              <div style="position:absolute;inset:0;width:42%;border-radius:999px;background:#150a24;animation:st-bar 1.1s ease-in-out infinite"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div data-screen-label="04 Perfil del comensal" style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:9px"><span style="font:500 11px 'JetBrains Mono',monospace;color:#B8F14E">04</span><span style="font-weight:700;font-size:14px;color:#b9a8d4">Perfil del comensal</span></div>
+        <div style="width:390px;height:812px;border-radius:46px;padding:9px;background:#2b1544;box-shadow:0 34px 70px -30px rgba(0,0,0,.75)">
+          <div style="width:100%;height:100%;border-radius:38px;overflow:hidden;background:#1E0F33;display:flex;flex-direction:column">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 26px 4px;font:500 13px 'JetBrains Mono',monospace;color:#fff">
+              <span>19:43</span>
+              <span style="display:flex;gap:5px;align-items:center"><span style="width:15px;height:9px;border-radius:2px;background:#fff"></span><span style="width:22px;height:10px;border-radius:3px;border:1.5px solid #fff"></span></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 20px 0">
+              <div style="width:38px;height:38px;border-radius:12px;background:#2b1544;color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">‹</div>
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:17px;color:#fff;line-height:1">{{ nombre }}</div>
+                <div style="font:500 10px 'JetBrains Mono',monospace;letter-spacing:.09em;color:#8e79b3">MESA {{ mesa }}</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;padding:22px 22px 0">
+              <div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:6px;border-radius:999px;background:#B8F14E"></div><div style="font:500 10px 'JetBrains Mono',monospace;color:#8e79b3">PIN</div></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:6px;border-radius:999px;background:#B8F14E"></div><div style="font:500 10px 'JetBrains Mono',monospace;color:#fff">PERFIL</div></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:6px;border-radius:999px;background:#3b1f57"></div><div style="font:500 10px 'JetBrains Mono',monospace;color:#8e79b3">SALA</div></div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;padding:22px 22px 24px">
+              <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:36px;line-height:1.05;color:#fff">¿Quién pide?</div>
+              <div style="margin-top:6px;font-size:15px;color:#b9a8d4">Tu nombre aparece en la sala y en el pedido de la mesa.</div>
+              <div style="margin-top:20px;display:flex;align-items:center;gap:14px;background:#2b1544;border:2px solid #B8F14E;border-radius:20px;padding:14px 16px">
+                <div style="width:52px;height:52px;border-radius:16px;background:#FFC02E;color:#150a24;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:26px;flex-shrink:0">C</div>
+                <div style="display:flex;flex-direction:column;gap:2px;flex:1">
+                  <div style="font:500 10px 'JetBrains Mono',monospace;letter-spacing:.09em;color:#8e79b3">TU NOMBRE</div>
+                  <div style="font-family:'Baloo 2',cursive;font-weight:700;font-size:24px;color:#fff;display:flex;align-items:center;gap:4px">Carlos<span style="width:2px;height:22px;background:#B8F14E;animation:st-glow 1.1s ease-in-out infinite"></span></div>
+                </div>
+                <div style="font:500 11px 'JetBrains Mono',monospace;color:#8e79b3">6/15</div>
+              </div>
+              <div style="margin-top:24px;font:500 11px 'JetBrains Mono',monospace;letter-spacing:.09em;color:#8e79b3">ELIGE TU COLOR</div>
+              <div style="margin-top:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:11px">
+                <div style="aspect-ratio:1;border-radius:18px;background:#FFC02E;color:#150a24;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:24px;box-shadow:0 0 0 3px #1E0F33, 0 0 0 6px #fff">C</div>
+                <div style="aspect-ratio:1;border-radius:18px;background:#23D5E0;color:#150a24;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:24px">C</div>
+                <div style="aspect-ratio:1;border-radius:18px;background:var(--st-accent,#FF4E5B);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:24px">C</div>
+                <div style="aspect-ratio:1;border-radius:18px;background:#B8F14E;color:#150a24;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:24px">C</div>
+                <div style="aspect-ratio:1;border-radius:18px;background:#7A3DF5;color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:24px">C</div>
+                <div style="aspect-ratio:1;border-radius:18px;background:#F58DBE;color:#150a24;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:24px">C</div>
+                <div style="aspect-ratio:1;border-radius:18px;background:#5CE0A0;color:#150a24;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:24px">C</div>
+                <div style="aspect-ratio:1;border-radius:18px;background:#F5F1FA;color:#150a24;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:24px">C</div>
+              </div>
+              <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px">
+                <div style="background:#B8F14E;color:#150a24;border-radius:20px;padding:19px;text-align:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:20px;box-shadow:0 6px 0 #8ac024">Entrar a la sala</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div data-screen-label="05 Lobby" style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:9px"><span style="font:500 11px 'JetBrains Mono',monospace;color:#B8F14E">05</span><span style="font-weight:700;font-size:14px;color:#b9a8d4">Lobby · sala en vivo</span></div>
+        <div style="width:390px;height:812px;border-radius:46px;padding:9px;background:#2b1544;box-shadow:0 34px 70px -30px rgba(0,0,0,.75)">
+          <div style="width:100%;height:100%;border-radius:38px;overflow:hidden;background:#1E0F33;display:flex;flex-direction:column;position:relative">
+            <div style="position:absolute;top:-70px;left:-60px;width:260px;height:260px;border-radius:50%;background:#7A3DF5;filter:blur(60px);opacity:.55"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 26px 4px;font:500 13px 'JetBrains Mono',monospace;color:#fff;position:relative">
+              <span>19:44</span>
+              <span style="display:flex;gap:5px;align-items:center"><span style="width:15px;height:9px;border-radius:2px;background:#fff"></span><span style="width:22px;height:10px;border-radius:3px;border:1.5px solid #fff"></span></span>
+            </div>
+            <div style="position:relative;display:flex;align-items:center;justify-content:space-between;padding:12px 20px 0">
+              <div style="display:flex;align-items:center;gap:11px">
+                <div style="width:38px;height:38px;border-radius:12px;background:var(--st-accent,#FF4E5B);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:20px">{{ inicial }}</div>
+                <div style="display:flex;flex-direction:column;gap:2px">
+                  <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:17px;color:#fff;line-height:1">{{ nombre }}</div>
+                  <div style="font:500 10px 'JetBrains Mono',monospace;letter-spacing:.09em;color:#8e79b3">MESA {{ mesa }} · EN VIVO</div>
+                </div>
+              </div>
+              <div style="width:38px;height:38px;border-radius:12px;background:#2b1544;display:flex;align-items:center;justify-content:center">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#B8F14E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"></path></svg>
+              </div>
+            </div>
+            <div style="position:relative;flex:1;display:flex;flex-direction:column;padding:20px 22px 24px">
+              <div style="background:#2b1544;border:2px solid #3b1f57;border-radius:22px;padding:16px;display:flex;align-items:center;justify-content:space-between">
+                <div style="display:flex;flex-direction:column;gap:3px">
+                  <div style="font:500 10px 'JetBrains Mono',monospace;letter-spacing:.09em;color:#8e79b3">CÓDIGO DE LA SALA</div>
+                  <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:40px;line-height:1;color:#fff;letter-spacing:.08em">7823</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+                  <div style="display:flex;align-items:center;gap:6px;background:rgba(184,241,78,.14);border-radius:999px;padding:5px 11px"><span style="width:7px;height:7px;border-radius:50%;background:#B8F14E;animation:st-glow 1.3s ease-in-out infinite"></span><span style="font:500 10px 'JetBrains Mono',monospace;color:#B8F14E">3 CONECTADOS</span></div>
+                  <div style="font-size:12.5px;color:#8e79b3;font-weight:500">Comparte para que entren</div>
+                </div>
+              </div>
+              <div style="margin-top:22px;font-family:'Baloo 2',cursive;font-weight:800;font-size:30px;line-height:1.05;color:#fff">En la mesa</div>
+              <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:11px">
+                <div style="background:#FFC02E;border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:8px;animation:st-pop .5s cubic-bezier(.34,1.56,.64,1) both">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="width:44px;height:44px;border-radius:14px;background:rgba(21,10,36,.14);color:#150a24;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:22px">C</div><div style="background:#150a24;color:#FFC02E;border-radius:999px;padding:4px 8px;font:500 9px 'JetBrains Mono',monospace">ANFITRIÓN</div></div>
+                  <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:22px;color:#150a24;line-height:1">Carlos <span style="font-size:14px;font-weight:600;opacity:.6">(tú)</span></div>
+                </div>
+                <div style="background:#23D5E0;border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:8px;animation:st-pop .5s cubic-bezier(.34,1.56,.64,1) .12s both">
+                  <div style="width:44px;height:44px;border-radius:14px;background:rgba(21,10,36,.14);color:#150a24;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:22px">A</div>
+                  <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:22px;color:#150a24;line-height:1">Ana</div>
+                </div>
+                <div style="background:#F58DBE;border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:8px;animation:st-pop .5s cubic-bezier(.34,1.56,.64,1) .24s both">
+                  <div style="width:44px;height:44px;border-radius:14px;background:rgba(21,10,36,.14);color:#150a24;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:22px">L</div>
+                  <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:22px;color:#150a24;line-height:1">Luis</div>
+                </div>
+                <div style="border:2px dashed #6b4b93;border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:8px;justify-content:center;align-items:center">
+                  <div style="width:44px;height:44px;border-radius:14px;background:#2b1544;color:#8e79b3;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:24px">+</div>
+                  <div style="font-size:13px;color:#8e79b3;font-weight:600;text-align:center">Esperando…</div>
+                </div>
+              </div>
+              <div style="margin-top:18px;background:rgba(122,61,245,.22);border:2px solid #7A3DF5;border-radius:18px;padding:13px 15px;display:flex;gap:11px;align-items:center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c9b4ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v4l3 2"></path></svg>
+                <div style="font-size:13.5px;line-height:1.4;color:#e2d7fb;font-weight:500">Eres el anfitrión: tú eliges cómo se paga y cuándo se manda todo a cocina.</div>
+              </div>
+              <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px">
+                <div style="background:#B8F14E;color:#150a24;border-radius:20px;padding:19px;text-align:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:20px;box-shadow:0 6px 0 #8ac024">Empezar el pedido</div>
+                <div style="background:#2b1544;border:2px solid #6b4b93;color:#fff;border-radius:18px;padding:14px;text-align:center;font-weight:700;font-size:15px">Compartir la sala</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-screen-label="06 Modo de pago" style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:9px"><span style="font:500 11px 'JetBrains Mono',monospace;color:#B8F14E">06</span><span style="font-weight:700;font-size:14px;color:#b9a8d4">Modo de pago</span></div>
+        <div style="width:390px;height:812px;border-radius:46px;padding:9px;background:#2b1544;box-shadow:0 34px 70px -30px rgba(0,0,0,.75)">
+          <div style="width:100%;height:100%;border-radius:38px;overflow:hidden;background:#1E0F33;display:flex;flex-direction:column">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 26px 4px;font:500 13px 'JetBrains Mono',monospace;color:#fff">
+              <span>19:45</span>
+              <span style="display:flex;gap:5px;align-items:center"><span style="width:15px;height:9px;border-radius:2px;background:#fff"></span><span style="width:22px;height:10px;border-radius:3px;border:1.5px solid #fff"></span></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 20px 0">
+              <div style="width:38px;height:38px;border-radius:12px;background:#2b1544;color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">‹</div>
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:17px;color:#fff;line-height:1">{{ nombre }}</div>
+                <div style="font:500 10px 'JetBrains Mono',monospace;letter-spacing:.09em;color:#8e79b3">MESA {{ mesa }} · 3 PERSONAS</div>
+              </div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;padding:22px 22px 24px">
+              <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:36px;line-height:1.05;color:#fff;text-wrap:balance">¿Cómo pagan hoy?</div>
+              <div style="margin-top:6px;font-size:15px;color:#b9a8d4">Se puede cambiar antes de cerrar la cuenta.</div>
+              <div style="margin-top:22px;display:flex;flex-direction:column;gap:12px">
+                <div style="background:#23D5E0;border-radius:22px;padding:18px;display:flex;gap:14px;align-items:center;box-shadow:0 6px 0 rgba(21,10,36,.35)">
+                  <div style="width:52px;height:52px;border-radius:16px;background:rgba(21,10,36,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#150a24" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M5 21a7 7 0 0 1 14 0"></path></svg>
+                  </div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:3px">
+                    <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:21px;color:#150a24;line-height:1.05">Cada uno lo suyo</div>
+                    <div style="font-size:13.5px;color:#123c40;font-weight:500;line-height:1.35">Pagas solo lo que pediste</div>
+                  </div>
+                  <div style="width:26px;height:26px;border-radius:50%;background:#150a24;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#23D5E0" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg></div>
+                </div>
+                <div style="background:#2b1544;border:2px solid #3b1f57;border-radius:22px;padding:18px;display:flex;gap:14px;align-items:center">
+                  <div style="width:52px;height:52px;border-radius:16px;background:#1E0F33;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#8e79b3" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M5 8h14M5 16h14"></path></svg>
+                  </div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:3px">
+                    <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:21px;color:#fff;line-height:1.05">Partes iguales</div>
+                    <div style="font-size:13.5px;color:#b9a8d4;font-weight:500;line-height:1.35">Pedimos de todo y dividimos entre 3</div>
+                  </div>
+                  <div style="width:26px;height:26px;border-radius:50%;border:2px solid #6b4b93"></div>
+                </div>
+                <div style="background:#2b1544;border:2px solid #3b1f57;border-radius:22px;padding:18px;display:flex;gap:14px;align-items:center">
+                  <div style="width:52px;height:52px;border-radius:16px;background:#1E0F33;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FFC02E" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.6-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.4-7 10-7 10z"></path></svg>
+                  </div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:3px">
+                    <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:21px;color:#fff;line-height:1.05">Yo invito</div>
+                    <div style="font-size:13.5px;color:#b9a8d4;font-weight:500;line-height:1.35">Pagas la cuenta completa de la mesa</div>
+                  </div>
+                  <div style="width:26px;height:26px;border-radius:50%;border:2px solid #6b4b93"></div>
+                </div>
+              </div>
+              <div style="margin-top:20px;background:rgba(35,213,224,.12);border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+                <div style="font:500 10px 'JetBrains Mono',monospace;letter-spacing:.09em;color:#7fd8e0">CÓMO QUEDARÍA</div>
+                <div style="display:flex;justify-content:space-between;font-size:14px;color:#fff;font-weight:600"><span>Carlos</span><span>lo que pida</span></div>
+                <div style="display:flex;justify-content:space-between;font-size:14px;color:#fff;font-weight:600"><span>Ana</span><span>lo que pida</span></div>
+                <div style="display:flex;justify-content:space-between;font-size:14px;color:#fff;font-weight:600"><span>Luis</span><span>lo que pida</span></div>
+              </div>
+              <div style="margin-top:auto;background:#B8F14E;color:#150a24;border-radius:20px;padding:19px;text-align:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:20px;box-shadow:0 6px 0 #8ac024">Ir al menú</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div data-screen-label="07 Menú" style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:9px"><span style="font:500 11px 'JetBrains Mono',monospace;color:#B8F14E">07</span><span style="font-weight:700;font-size:14px;color:#b9a8d4">Menú y carrito</span></div>
+        <div style="width:390px;height:812px;border-radius:46px;padding:9px;background:#2b1544;box-shadow:0 34px 70px -30px rgba(0,0,0,.75)">
+          <div style="width:100%;height:100%;border-radius:38px;overflow:hidden;background:#F7F3FB;display:flex;flex-direction:column">
+            <div style="background:#1E0F33;padding:15px 26px 0;display:flex;flex-direction:column">
+              <div style="display:flex;justify-content:space-between;align-items:center;font:500 13px 'JetBrains Mono',monospace;color:#fff">
+                <span>19:48</span>
+                <span style="display:flex;gap:5px;align-items:center"><span style="width:15px;height:9px;border-radius:2px;background:#fff"></span><span style="width:22px;height:10px;border-radius:3px;border:1.5px solid #fff"></span></span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0 0;margin:0 -6px">
+                <div style="display:flex;align-items:center;gap:11px">
+                  <div style="width:36px;height:36px;border-radius:12px;background:var(--st-accent,#FF4E5B);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:19px">{{ inicial }}</div>
+                  <div style="display:flex;flex-direction:column;gap:1px">
+                    <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:17px;color:#fff;line-height:1">{{ nombre }}</div>
+                    <div style="font:500 10px 'JetBrains Mono',monospace;letter-spacing:.09em;color:#8e79b3">MESA {{ mesa }} · CADA UNO LO SUYO</div>
+                  </div>
+                </div>
+                <div style="display:flex;gap:8px">
+                  <div style="width:36px;height:36px;border-radius:12px;background:#FFC02E;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#150a24" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a2 2 0 0 0 3.4 0"></path></svg></div>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;padding:16px 0 14px;overflow:hidden">
+                <div style="background:#B8F14E;color:#150a24;border-radius:999px;padding:9px 16px;font-weight:800;font-size:14px;white-space:nowrap">Brasas</div>
+                <div style="background:#2b1544;color:#b9a8d4;border-radius:999px;padding:9px 16px;font-weight:700;font-size:14px;white-space:nowrap">Criollos</div>
+                <div style="background:#2b1544;color:#b9a8d4;border-radius:999px;padding:9px 16px;font-weight:700;font-size:14px;white-space:nowrap">Bebidas</div>
+                <div style="background:#2b1544;color:#b9a8d4;border-radius:999px;padding:9px 16px;font-weight:700;font-size:14px;white-space:nowrap">Postres</div>
+              </div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:11px;padding:16px 18px 0;overflow:hidden">
+              <div style="background:#fff;border:2px solid #B8F14E;border-radius:22px;padding:12px;display:flex;gap:13px;align-items:center;box-shadow:0 4px 0 rgba(184,241,78,.5)">
+                <div style="width:76px;height:76px;border-radius:16px;background:repeating-linear-gradient(135deg,#efe9f5 0 8px,#e5dcef 8px 16px);display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font:500 8px 'JetBrains Mono',monospace;color:#8b7fa0;text-align:center;line-height:1.3">FOTO<br>PLATO</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:3px;min-width:0">
+                  <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:18px;color:#150a24;line-height:1.1">1/2 Pollo a la brasa</div>
+                  <div style="font-size:12.5px;color:#6b6178;line-height:1.35">Con papas, ensalada y cremas de la casa</div>
+                  <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:17px;color:#150a24">S/ 37.00</div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:5px;background:#150a24;border-radius:999px;padding:6px 5px">
+                  <div style="width:26px;height:26px;border-radius:50%;background:#B8F14E;color:#150a24;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px">+</div>
+                  <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:15px;color:#fff">1</div>
+                  <div style="width:26px;height:26px;border-radius:50%;background:#3b1f57;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px">–</div>
+                </div>
+              </div>
+              <div style="background:#fff;border:2px solid transparent;border-radius:22px;padding:12px;display:flex;gap:13px;align-items:center">
+                <div style="width:76px;height:76px;border-radius:16px;background:repeating-linear-gradient(135deg,#efe9f5 0 8px,#e5dcef 8px 16px);display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font:500 8px 'JetBrains Mono',monospace;color:#8b7fa0;text-align:center;line-height:1.3">FOTO<br>PLATO</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:3px;min-width:0">
+                  <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:18px;color:#150a24;line-height:1.1">1/4 Pollo a la brasa</div>
+                  <div style="font-size:12.5px;color:#6b6178;line-height:1.35">Porción individual con papas</div>
+                  <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:17px;color:#150a24">S/ 23.00</div>
+                </div>
+                <div style="background:#150a24;color:#fff;border-radius:999px;padding:9px 15px;font-weight:800;font-size:14px">Agregar</div>
+              </div>
+              <div style="background:#fff;border:2px solid transparent;border-radius:22px;padding:12px;display:flex;gap:13px;align-items:center">
+                <div style="width:76px;height:76px;border-radius:16px;background:repeating-linear-gradient(135deg,#efe9f5 0 8px,#e5dcef 8px 16px);display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font:500 8px 'JetBrains Mono',monospace;color:#8b7fa0;text-align:center;line-height:1.3">FOTO<br>PLATO</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:3px;min-width:0">
+                  <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:18px;color:#150a24;line-height:1.1">Anticuchos (3u)</div>
+                  <div style="font-size:12.5px;color:#6b6178;line-height:1.35">Corazón marinado, choclo y papa dorada</div>
+                  <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:17px;color:#150a24">S/ 28.00</div>
+                </div>
+                <div style="background:#150a24;color:#fff;border-radius:999px;padding:9px 15px;font-weight:800;font-size:14px">Agregar</div>
+              </div>
+              <div style="background:#fff;border:2px solid transparent;border-radius:22px;padding:12px;display:flex;gap:13px;align-items:center;opacity:.55">
+                <div style="width:76px;height:76px;border-radius:16px;background:repeating-linear-gradient(135deg,#efe9f5 0 8px,#e5dcef 8px 16px);flex-shrink:0"></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:3px;min-width:0">
+                  <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:18px;color:#150a24;line-height:1.1">Costillas BBQ</div>
+                  <div style="font-size:12.5px;color:#6b6178">Agotado por hoy</div>
+                </div>
+              </div>
+            </div>
+            <div style="background:#1E0F33;border-radius:26px 26px 38px 38px;padding:16px 18px 22px;display:flex;align-items:center;gap:14px">
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font:500 10px 'JetBrains Mono',monospace;letter-spacing:.09em;color:#8e79b3">2 PLATOS</div>
+                <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:24px;color:#fff;line-height:1">S/ 60.00</div>
+              </div>
+              <div style="flex:1;background:#B8F14E;color:#150a24;border-radius:18px;padding:16px;text-align:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:18px;box-shadow:0 5px 0 #8ac024">Ver pedido de la mesa</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div data-screen-label="08 Pedido grupal" style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:9px"><span style="font:500 11px 'JetBrains Mono',monospace;color:#B8F14E">08</span><span style="font-weight:700;font-size:14px;color:#b9a8d4">Pedido grupal</span></div>
+        <div style="width:390px;height:812px;border-radius:46px;padding:9px;background:#2b1544;box-shadow:0 34px 70px -30px rgba(0,0,0,.75)">
+          <div style="width:100%;height:100%;border-radius:38px;overflow:hidden;background:#1E0F33;display:flex;flex-direction:column">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 26px 4px;font:500 13px 'JetBrains Mono',monospace;color:#fff">
+              <span>19:52</span>
+              <span style="display:flex;gap:5px;align-items:center"><span style="width:15px;height:9px;border-radius:2px;background:#fff"></span><span style="width:22px;height:10px;border-radius:3px;border:1.5px solid #fff"></span></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 20px 0">
+              <div style="width:38px;height:38px;border-radius:12px;background:#2b1544;color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">‹</div>
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:17px;color:#fff;line-height:1">{{ nombre }}</div>
+                <div style="font:500 10px 'JetBrains Mono',monospace;letter-spacing:.09em;color:#8e79b3">MESA {{ mesa }} · PEDIDO DE LA MESA</div>
+              </div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;padding:20px 22px 24px">
+              <div style="background:var(--st-accent,#FF4E5B);border-radius:24px;padding:18px;display:flex;justify-content:space-between;align-items:center">
+                <div style="display:flex;flex-direction:column;gap:2px">
+                  <div style="font:500 10px 'JetBrains Mono',monospace;letter-spacing:.09em;color:rgba(21,10,36,.55)">TOTAL DE LA MESA</div>
+                  <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:38px;line-height:1;color:#2b0d12">S/ 120.00</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+                  <div style="background:rgba(21,10,36,.15);border-radius:999px;padding:5px 11px;font:500 10px 'JetBrains Mono',monospace;color:#2b0d12">3 PERSONAS</div>
+                  <div style="background:rgba(21,10,36,.15);border-radius:999px;padding:5px 11px;font:500 10px 'JetBrains Mono',monospace;color:#2b0d12">5 PLATOS</div>
+                </div>
+              </div>
+              <div style="margin-top:20px;display:flex;justify-content:space-between;align-items:center">
+                <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:26px;color:#fff">Quién pidió qué</div>
+                <div style="display:flex;align-items:center;gap:6px;background:rgba(255,192,46,.16);border-radius:999px;padding:5px 11px"><span style="width:7px;height:7px;border-radius:50%;background:#FFC02E;animation:st-glow 1.3s ease-in-out infinite"></span><span style="font:500 10px 'JetBrains Mono',monospace;color:#FFC02E">FALTA 1</span></div>
+              </div>
+              <div style="margin-top:14px;display:flex;flex-direction:column;gap:11px">
+                <div style="background:#2b1544;border-left:6px solid #FFC02E;border-radius:20px;padding:15px;display:flex;flex-direction:column;gap:10px">
+                  <div style="display:flex;align-items:center;gap:11px">
+                    <div style="width:38px;height:38px;border-radius:12px;background:#FFC02E;color:#150a24;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:19px">C</div>
+                    <div style="flex:1;font-family:'Baloo 2',cursive;font-weight:800;font-size:19px;color:#fff">Carlos <span style="font-size:13px;font-weight:600;color:#8e79b3">(tú)</span></div>
+                    <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:19px;color:#B8F14E">S/ 60.00</div>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:5px;padding-left:49px">
+                    <div style="display:flex;justify-content:space-between;font-size:13.5px;color:#d6cce9;font-weight:500"><span>1× 1/2 Pollo a la brasa</span><span>S/ 37.00</span></div>
+                    <div style="display:flex;justify-content:space-between;font-size:13.5px;color:#d6cce9;font-weight:500"><span>1× Anticuchos (3u)</span><span>S/ 23.00</span></div>
+                  </div>
+                </div>
+                <div style="background:#2b1544;border-left:6px solid #23D5E0;border-radius:20px;padding:15px;display:flex;flex-direction:column;gap:10px">
+                  <div style="display:flex;align-items:center;gap:11px">
+                    <div style="width:38px;height:38px;border-radius:12px;background:#23D5E0;color:#150a24;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:19px">A</div>
+                    <div style="flex:1;font-family:'Baloo 2',cursive;font-weight:800;font-size:19px;color:#fff">Ana</div>
+                    <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:19px;color:#B8F14E">S/ 37.00</div>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:5px;padding-left:49px">
+                    <div style="display:flex;justify-content:space-between;font-size:13.5px;color:#d6cce9;font-weight:500"><span>1× 1/2 Pollo a la brasa</span><span>S/ 37.00</span></div>
+                  </div>
+                </div>
+                <div style="background:#2b1544;border-left:6px solid #F58DBE;border-radius:20px;padding:15px;display:flex;align-items:center;gap:11px">
+                  <div style="width:38px;height:38px;border-radius:12px;background:#F58DBE;color:#150a24;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:19px">L</div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:2px">
+                    <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:19px;color:#fff">Luis</div>
+                    <div style="font-size:13px;color:#8e79b3;font-weight:500">Sigue eligiendo…</div>
+                  </div>
+                  <div style="display:flex;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:#8e79b3;animation:st-glow 1.1s ease-in-out infinite"></span><span style="width:6px;height:6px;border-radius:50%;background:#8e79b3;animation:st-glow 1.1s ease-in-out .2s infinite"></span><span style="width:6px;height:6px;border-radius:50%;background:#8e79b3;animation:st-glow 1.1s ease-in-out .4s infinite"></span></div>
+                </div>
+              </div>
+              <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px">
+                <div style="background:#3b1f57;color:#8e79b3;border-radius:20px;padding:19px;text-align:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:19px">Esperando a Luis…</div>
+                <div style="text-align:center;font-size:13px;color:#8e79b3;font-weight:500">Como anfitrión, tú mandas todo a cocina cuando estén listos.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-screen-label="09 Pedido enviado" style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:9px"><span style="font:500 11px 'JetBrains Mono',monospace;color:#B8F14E">09</span><span style="font-weight:700;font-size:14px;color:#b9a8d4">Pedido enviado · tracking</span></div>
+        <div style="width:390px;height:812px;border-radius:46px;padding:9px;background:#2b1544;box-shadow:0 34px 70px -30px rgba(0,0,0,.75)">
+          <div style="width:100%;height:100%;border-radius:38px;overflow:hidden;background:#1E0F33;display:flex;flex-direction:column;position:relative">
+            <div style="position:absolute;top:120px;left:50%;transform:translateX(-50%);width:300px;height:300px;border-radius:50%;background:#FFC02E;filter:blur(70px);opacity:.28"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 26px 4px;font:500 13px 'JetBrains Mono',monospace;color:#fff;position:relative">
+              <span>19:55</span>
+              <span style="display:flex;gap:5px;align-items:center"><span style="width:15px;height:9px;border-radius:2px;background:#fff"></span><span style="width:22px;height:10px;border-radius:3px;border:1.5px solid #fff"></span></span>
+            </div>
+            <div style="position:relative;display:flex;align-items:center;gap:11px;padding:12px 20px 0">
+              <div style="width:38px;height:38px;border-radius:12px;background:var(--st-accent,#FF4E5B);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:20px">{{ inicial }}</div>
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:17px;color:#fff;line-height:1">{{ nombre }}</div>
+                <div style="font:500 10px 'JetBrains Mono',monospace;letter-spacing:.09em;color:#8e79b3">MESA {{ mesa }} · EN COCINA</div>
+              </div>
+            </div>
+            <div style="position:relative;flex:1;display:flex;flex-direction:column;padding:22px 22px 24px">
+              <div style="display:flex;gap:8px">
+                <div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:8px;border-radius:999px;background:#FFC02E"></div><div style="font:500 10px 'JetBrains Mono',monospace;color:#FFC02E">EN COCINA</div></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:8px;border-radius:999px;background:#3b1f57"></div><div style="font:500 10px 'JetBrains Mono',monospace;color:#8e79b3">LISTO</div></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:8px;border-radius:999px;background:#3b1f57"></div><div style="font:500 10px 'JetBrains Mono',monospace;color:#8e79b3">ENTREGADO</div></div>
+              </div>
+              <div style="margin-top:26px;background:#FFC02E;border-radius:26px;padding:26px 20px;display:flex;flex-direction:column;align-items:center;gap:14px;box-shadow:0 7px 0 rgba(21,10,36,.3)">
+                <div style="width:88px;height:88px;border-radius:28px;background:#150a24;display:flex;align-items:center;justify-content:center;animation:st-float 3.2s ease-in-out infinite">
+                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#FFC02E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 13a6 6 0 0 1 12 0v0"></path><path d="M5 13h14v3a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-3z"></path><path d="M9 7c0-1.5 1.3-2 1.5-3.5M14.5 7c0-1.5 1.3-2 1.5-3.5"></path></svg>
+                </div>
+                <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:34px;line-height:1;color:#150a24;text-align:center">La cocina<br>está en eso</div>
+                <div style="font-size:14.5px;color:#43330a;font-weight:600;text-align:center;max-width:250px;text-wrap:pretty">5 platos de la mesa entraron juntos al fuego. Te avisamos en cuanto salgan.</div>
+                <div style="background:#150a24;border-radius:999px;padding:9px 18px;display:flex;align-items:center;gap:10px">
+                  <span style="font:500 10px 'JetBrains Mono',monospace;color:#8e79b3">FALTAN</span>
+                  <span style="font-family:'Baloo 2',cursive;font-weight:800;font-size:20px;color:#FFC02E">14 min</span>
+                </div>
+              </div>
+              <div style="margin-top:18px;display:flex;flex-direction:column;gap:10px">
+                <div style="background:#2b1544;border:2px solid #3b1f57;border-radius:20px;padding:15px;display:flex;gap:13px;align-items:center">
+                  <div style="width:42px;height:42px;border-radius:14px;background:var(--st-accent,#FF4E5B);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a2 2 0 0 0 3.4 0"></path></svg></div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:1px"><div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:18px;color:#fff">Llamar al mozo</div><div style="font-size:13px;color:#8e79b3;font-weight:500">Cubiertos, hielo, algo más</div></div>
+                  <div style="color:#6b4b93;font-size:22px;font-weight:700">›</div>
+                </div>
+                <div style="background:#2b1544;border:2px solid #3b1f57;border-radius:20px;padding:15px;display:flex;gap:13px;align-items:center">
+                  <div style="width:42px;height:42px;border-radius:14px;background:#7A3DF5;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5M9 13h6M9 17h4"></path></svg></div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:1px"><div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:18px;color:#fff">Ver la cuenta</div><div style="font-size:13px;color:#8e79b3;font-weight:500">Revisa el total y paga</div></div>
+                  <div style="color:#6b4b93;font-size:22px;font-weight:700">›</div>
+                </div>
+              </div>
+              <div style="margin-top:auto;text-align:center;font-size:13.5px;color:#8e79b3;font-weight:600">¡Gracias por preferir {{ nombre }}!</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div data-screen-label="10 Cuenta" style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:9px"><span style="font:500 11px 'JetBrains Mono',monospace;color:#B8F14E">10</span><span style="font-weight:700;font-size:14px;color:#b9a8d4">Resumen y cuenta</span></div>
+        <div style="width:390px;height:812px;border-radius:46px;padding:9px;background:#2b1544;box-shadow:0 34px 70px -30px rgba(0,0,0,.75)">
+          <div style="width:100%;height:100%;border-radius:38px;overflow:hidden;background:#F7F3FB;display:flex;flex-direction:column">
+            <div style="background:#1E0F33;padding:15px 22px 22px;display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;justify-content:space-between;align-items:center;font:500 13px 'JetBrains Mono',monospace;color:#fff">
+                <span>20:32</span>
+                <span style="display:flex;gap:5px;align-items:center"><span style="width:15px;height:9px;border-radius:2px;background:#fff"></span><span style="width:22px;height:10px;border-radius:3px;border:1.5px solid #fff"></span></span>
+              </div>
+              <div style="display:flex;align-items:center;gap:11px">
+                <div style="width:36px;height:36px;border-radius:12px;background:#2b1544;color:#fff;display:flex;align-items:center;justify-content:center;font-size:21px;font-weight:700">‹</div>
+                <div style="display:flex;flex-direction:column;gap:1px">
+                  <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:17px;color:#fff;line-height:1">{{ nombre }}</div>
+                  <div style="font:500 10px 'JetBrains Mono',monospace;letter-spacing:.09em;color:#8e79b3">MESA {{ mesa }} · TU PARTE</div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:2px;align-items:center;padding-top:4px">
+                <div style="font:500 10px 'JetBrains Mono',monospace;letter-spacing:.09em;color:#8e79b3">TOTAL A PAGAR</div>
+                <div style="font-family:'Baloo 2',cursive;font-weight:800;font-size:52px;line-height:1;color:#B8F14E">S/ 69.00</div>
+              </div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:14px;padding:18px 18px 0;overflow:hidden">
+              <div style="background:#fff;border-radius:22px;padding:16px;display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;justify-content:space-between;font-size:14.5px;color:#6b6178;font-weight:500"><span>Tu consumo (2 platos)</span><span style="color:#150a24;font-weight:700">S/ 60.00</span></div>
+                <div style="display:flex;justify-content:space-between;font-size:14.5px;color:#6b6178;font-weight:500"><span>Servicio 10%</span><span style="color:#150a24;font-weight:700">S/ 6.00</span></div>
+                <div style="display:flex;justify-content:space-between;font-size:14.5px;color:#6b6178;font-weight:500"><span>Propina 5%</span><span style="color:#150a24;font-weight:700">S/ 3.00</span></div>
+                <div style="height:2px;background:#efe9f5;border-radius:2px;margin:3px 0"></div>
+                <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:'Baloo 2',cursive;font-weight:800;font-size:19px;color:#150a24">Total</span><span style="font-family:'Baloo 2',cursive;font-weight:800;font-size:22px;color:#150a24">S/ 69.00</span></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <div style="font:500 10px 'JetBrains Mono',monospace;letter-spacing:.09em;color:#8b7fa0">PROPINA PARA LA COCINA</div>
+                <div style="display:flex;gap:9px">
+                  <div style="flex:1;background:#fff;border-radius:16px;padding:12px;text-align:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:17px;color:#8b7fa0">0%</div>
+                  <div style="flex:1;background:#150a24;border-radius:16px;padding:12px;text-align:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:17px;color:#B8F14E">5%</div>
+                  <div style="flex:1;background:#fff;border-radius:16px;padding:12px;text-align:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:17px;color:#8b7fa0">10%</div>
+                  <div style="flex:1;background:#fff;border-radius:16px;padding:12px;text-align:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:17px;color:#8b7fa0">15%</div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <div style="font:500 10px 'JetBrains Mono',monospace;letter-spacing:.09em;color:#8b7fa0">CÓMO PAGAS</div>
+                <div style="display:flex;gap:9px">
+                  <div style="flex:1;background:#7A3DF5;border-radius:18px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:7px;box-shadow:0 5px 0 rgba(21,10,36,.3)">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="3"></rect><path d="M11 18h2"></path></svg>
+                    <span style="font-weight:800;font-size:13px;color:#fff">Yape / Plin</span>
+                  </div>
+                  <div style="flex:1;background:#fff;border-radius:18px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:7px">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8b7fa0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"></rect><path d="M2 10h20"></path></svg>
+                    <span style="font-weight:800;font-size:13px;color:#6b6178">Tarjeta</span>
+                  </div>
+                  <div style="flex:1;background:#fff;border-radius:18px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:7px">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8b7fa0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2.5"></circle></svg>
+                    <span style="font-weight:800;font-size:13px;color:#6b6178">Efectivo</span>
+                  </div>
+                </div>
+              </div>
+              <div style="background:rgba(184,241,78,.28);border:2px solid #B8F14E;border-radius:18px;padding:13px 15px;display:flex;gap:11px;align-items:center">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#4f6b18" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="9"></circle><path d="M12 16v-5M12 8h.01"></path></svg>
+                <div style="font-size:13px;line-height:1.4;color:#3f5514;font-weight:600">Ana y Luis pagan su parte por separado. La mesa se cierra cuando los 3 terminen.</div>
+              </div>
+            </div>
+            <div style="background:#1E0F33;border-radius:26px 26px 38px 38px;padding:16px 18px 22px;display:flex;flex-direction:column;gap:9px">
+              <div style="background:#B8F14E;color:#150a24;border-radius:18px;padding:17px;text-align:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:19px;box-shadow:0 5px 0 #8ac024">Pagar S/ 69.00</div>
+              <div style="background:transparent;border:2px solid #6b4b93;color:#fff;border-radius:16px;padding:12px;text-align:center;font-weight:700;font-size:14.5px">Que el mozo traiga la boleta</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!--SLOT-->
+    </div>
+  </div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;nombreRestaurante&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;La Fogata&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;mesa&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;12&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#FF4E5B&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#FF4E5B&quot;,&quot;#7A3DF5&quot;,&quot;#23D5E0&quot;,&quot;#FFC02E&quot;]}}">
+class Component extends DCLogic {
+  componentDidMount() { this.syncAccent(); }
+  componentDidUpdate() { this.syncAccent(); }
+  syncAccent() {
+    document.documentElement.style.setProperty('--st-accent', this.props.accent ?? '#FF4E5B');
+  }
+  renderVals() {
+    const nombre = this.props.nombreRestaurante ?? 'La Fogata';
+    return {
+      nombre,
+      inicial: nombre.trim().charAt(0).toUpperCase(),
+      mesa: this.props.mesa ?? '12',
+    };
+  }
+}
+</script>
+</body>
+</html>

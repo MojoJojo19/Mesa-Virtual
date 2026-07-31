@@ -1,29 +1,45 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { QrCode, ScanLine, Flame, AlertTriangle } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
 import { getMesa } from '../services/api'
+import TopBar from '../components/TopBar'
+import Monograma from '../components/Monograma'
+import { aplicarAcento } from '../theme/sala'
+
+const PASOS = [
+  { n: 1, color: 'var(--st-accent)', fg: '#fff',      texto: 'Entran con el PIN del centro de mesa' },
+  { n: 2, color: 'var(--st-violet)', fg: '#fff',      texto: 'Cada uno arma su pedido' },
+  { n: 3, color: 'var(--st-lime)',   fg: '#150a24',   texto: 'Mandan todo a cocina de una vez' }
+]
 
 export default function Bienvenida() {
   const { idMesa } = useParams()
   const navigate = useNavigate()
-  const [nombreRestaurante, setNombreRestaurante] = useState('Cargando...')
+
+  const [nombreRestaurante, setNombreRestaurante] = useState('')
+  const [comensales, setComensales] = useState([])
   const [errorMesa, setErrorMesa] = useState(false)
+  const [cargando, setCargando] = useState(true)
 
   useEffect(() => {
     const cargarDetallesMesa = async () => {
       try {
         const mesa = await getMesa(idMesa)
-        // Si el backend responde o el mock nos da un objeto
         if (mesa && mesa.id_mesa) {
           const restName = mesa.restaurante ? mesa.restaurante.nombre : (mesa.nombre_restaurante ? mesa.nombre_restaurante : 'La Fogata')
           setNombreRestaurante(restName)
           localStorage.setItem('swifttable_nombre_restaurante', restName)
+          setComensales(Array.isArray(mesa.comensales) ? mesa.comensales : [])
+          // El acento del local viste todas las pantallas siguientes.
+          aplicarAcento(mesa.id_restaurante)
         } else {
           setErrorMesa(true)
         }
       } catch (err) {
-        console.error("Error cargando mesa:", err)
+        console.error('Error cargando mesa:', err)
         setErrorMesa(true)
+      } finally {
+        setCargando(false)
       }
     }
     cargarDetallesMesa()
@@ -31,104 +47,103 @@ export default function Bienvenida() {
 
   if (errorMesa) {
     return (
-      <div className="content-wrapper flex-col" style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '24px', minHeight: '80vh' }}>
-        <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'var(--red-bg)', color: 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
-          <AlertTriangle size={36} />
+      <div className="st-screen">
+        <div className="st-body" style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center', gap: 18 }}>
+          <div className="st-tile" style={{ width: 84, height: 84, borderRadius: 26, background: 'var(--st-surface)', color: '#FF6B76' }}>
+            <AlertTriangle size={40} strokeWidth={2.4} />
+          </div>
+          <h1 className="st-h2">Esta mesa no existe</h1>
+          <p className="st-lead" style={{ maxWidth: 280 }}>
+            El código QR no corresponde a ninguna mesa activa. Pídele ayuda al personal del local.
+          </p>
+          <button className="st-btn st-btn--primary" style={{ marginTop: 12 }} onClick={() => navigate('/')}>
+            Volver al inicio
+          </button>
         </div>
-        <h2 className="title-large" style={{ fontSize: '24px', color: 'var(--text-1)', marginBottom: '8px' }}>Mesa no válida</h2>
-        <p style={{ fontSize: '14px', color: 'var(--text-2)', marginBottom: '32px' }}>El código QR escaneado no corresponde a ninguna mesa activa del sistema.</p>
-        <button className="wf-btn-solid" onClick={() => navigate('/')}>Volver al Selector</button>
       </div>
     )
   }
 
+  /* Cuatro lugares en la mesa: los que ya entraron, y el resto libres. */
+  const lugares = [...comensales.slice(0, 4)]
+  const libres = Math.max(1, 4 - lugares.length)
+
   return (
-    <>
-      {/* AppBar Transparente para un look más inmersivo */}
-      <div className="native-app-bar" style={{ background: 'transparent', border: 'none', backdropFilter: 'none' }}>
-        <div className="left-action"></div>
-        <div className="title" style={{ color: 'var(--text-1)' }}></div>
-        <div className="right-action"></div>
-      </div>
+    <div className="st-screen">
+      <div
+        className="st-glow"
+        style={{ top: -90, right: -70, width: 280, height: 280, background: 'var(--st-accent)', opacity: 0.4 }}
+      />
 
-      <div className="content-wrapper flex-col" style={{ padding: '0 24px 24px', marginTop: '-40px' }}>
-        
-        {/* Hero Section */}
-        <div style={{ textAlign: 'center', marginBottom: '40px', marginTop: '16px' }}>
-          <div style={{ 
-            width: '80px', height: '80px', borderRadius: '24px', 
-            background: 'linear-gradient(135deg, var(--accent), var(--accent-2))', color: 'white',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 20px',
-            boxShadow: '0 12px 24px rgba(225, 77, 42, 0.3)'
-          }}>
-            <Flame size={40} strokeWidth={2} />
+      <TopBar nombre={nombreRestaurante || undefined} meta={`Mesa ${idMesa} · Sala abierta`} />
+
+      <div className="st-body">
+        <div style={{ marginTop: 30, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            {lugares.map((c, i) => (
+              <Monograma
+                key={c.id_comensal || i}
+                nombre={c.nombre}
+                avatar={c.avatar}
+                size={52}
+                radius={16}
+                className="st-float"
+                style={{ animationDelay: `${i * 0.5}s` }}
+              />
+            ))}
+            {Array.from({ length: libres }).map((_, i) => (
+              <div
+                key={`libre-${i}`}
+                className="st-tile"
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 16,
+                  border: '2px dashed var(--st-border-2)',
+                  color: 'var(--st-text-3)',
+                  fontSize: 24
+                }}
+              >
+                +
+              </div>
+            ))}
           </div>
-          <h1 className="title-large" style={{ fontSize: '36px', letterSpacing: '-0.03em', color: 'var(--text-1)', marginBottom: '4px' }}>
-            {nombreRestaurante}
+
+          <h1 className="st-h1" style={{ fontSize: 42, textAlign: 'center' }}>
+            {comensales.length > 0 ? 'Súmate a la mesa' : '¡Su mesa ya está lista!'}
           </h1>
-          <p style={{ fontSize: '16px', color: 'var(--text-2)', fontWeight: '500' }}>
-            Mesa {idMesa}
+
+          <p className="st-lead" style={{ textAlign: 'center', maxWidth: 290 }}>
+            Pidan juntos desde el celular, vean lo que eligió cada uno y dividan la cuenta como quieran.
           </p>
         </div>
 
-        {/* Scanner Card Premium */}
-        <div 
-          className="card animate-fade-in" 
-          style={{ 
-            padding: '32px 24px', 
-            marginBottom: '32px',
-            borderRadius: '24px',
-            background: 'linear-gradient(180deg, #ffffff 0%, var(--surface-2) 100%)',
-            border: '1px solid var(--border)',
-            boxShadow: '0 20px 40px -12px rgba(0,0,0,0.05)',
-            textAlign: 'center',
-            position: 'relative',
-            overflow: 'hidden'
-          }}
-        >
-          {/* Decorative glowing orb */}
-          <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', width: '150px', height: '150px', background: 'var(--accent)', filter: 'blur(80px)', opacity: 0.15, borderRadius: '50%' }} />
-          
-          <div className="section-label" style={{ color: 'var(--accent)', fontWeight: '800' }}>Empezar a pedir</div>
-          <p style={{ fontSize: '15px', color: 'var(--text-2)', marginBottom: '24px', lineHeight: 1.5 }}>
-            Ingresa a la mesa utilizando el PIN de seguridad impreso en el acrílico físico de tu mesa.
-          </p>
-          
-          <div style={{ position: 'relative', width: '140px', height: '140px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {/* Esquinas del scanner simuladas */}
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '30px', height: '30px', borderTop: '3px solid var(--accent)', borderLeft: '3px solid var(--accent)', borderRadius: '8px 0 0 0' }} />
-            <div style={{ position: 'absolute', top: 0, right: 0, width: '30px', height: '30px', borderTop: '3px solid var(--accent)', borderRight: '3px solid var(--accent)', borderRadius: '0 8px 0 0' }} />
-            <div style={{ position: 'absolute', bottom: 0, left: 0, width: '30px', height: '30px', borderBottom: '3px solid var(--accent)', borderLeft: '3px solid var(--accent)', borderRadius: '0 0 0 8px' }} />
-            <div style={{ position: 'absolute', bottom: 0, right: 0, width: '30px', height: '30px', borderBottom: '3px solid var(--accent)', borderRight: '3px solid var(--accent)', borderRadius: '0 0 8px 0' }} />
-            
-            <QrCode size={64} color="var(--text-1)" strokeWidth={1} style={{ opacity: 0.8 }} />
-            
-            {/* Scanning line animation css */}
-            <div style={{ position: 'absolute', top: '10%', left: '10%', right: '10%', height: '2px', background: 'var(--accent)', boxShadow: '0 0 8px var(--accent)', animation: 'scan 2.5s ease-in-out infinite' }} />
-          </div>
-          
-          <style>{`
-            @keyframes scan {
-              0%, 100% { transform: translateY(0); opacity: 0; }
-              10%, 90% { opacity: 1; }
-              50% { transform: translateY(112px); }
-            }
-          `}</style>
+        <div className="st-card" style={{ marginTop: 26, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="st-label">Cómo funciona</div>
+          {PASOS.map(p => (
+            <div key={p.n} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <div
+                className="st-tile"
+                style={{ width: 28, height: 28, borderRadius: 9, background: p.color, color: p.fg, fontSize: 14 }}
+              >
+                {p.n}
+              </div>
+              <div style={{ fontSize: 14.5, fontWeight: 500, color: '#e9e1f5' }}>{p.texto}</div>
+            </div>
+          ))}
         </div>
 
-        {/* Botón de Acceso Principal */}
-        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <button 
-            className="wf-btn-solid" 
+        <div className="st-footer">
+          <button
+            className="st-btn st-btn--primary"
             onClick={() => navigate(`/mesa/${idMesa}/pin`)}
-            disabled={nombreRestaurante === 'Cargando...'}
+            disabled={cargando}
           >
-            Ingresar a la Mesa
+            {cargando ? 'Buscando la mesa…' : 'Ingresar a la mesa'}
           </button>
+          <div className="st-label" style={{ textAlign: 'center' }}>Sin descargar nada · Sin crear cuenta</div>
         </div>
-
       </div>
-    </>
+    </div>
   )
 }

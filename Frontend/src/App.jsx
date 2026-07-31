@@ -1,7 +1,6 @@
 import React from 'react'
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import { ToastProvider } from './components/Toast'
-import StepBar         from './components/StepBar'
 import Bienvenida      from './pages/Bienvenida'
 import PinIngreso      from './pages/PinIngreso'
 import AccesoConfirmado from './pages/AccesoConfirmado'
@@ -16,11 +15,9 @@ import Logistica       from './pages/Logistica'
 import SelectorRol     from './pages/SelectorRol'
 
 function AppInner() {
-  const location = useLocation()
-
   return (
     <div className="app-container">
-      {/* StepBar is temporarily hidden for native feel, or we can leave it. I'll remove it from the global scope to let headers handle navigation natively. */}
+      {/* Cada pantalla dibuja su propia cabecera y su barra de pasos. */}
       <Routes>
         <Route path="/"                          element={<SelectorRol />} />
         <Route path="/mesa/:idMesa"              element={<Bienvenida />} />

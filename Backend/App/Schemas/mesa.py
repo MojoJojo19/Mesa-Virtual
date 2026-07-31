@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 from pydantic import BaseModel
 
 class MesaCreate(BaseModel):
@@ -11,6 +11,16 @@ class RestauranteMini(BaseModel):
     class Config:
         from_attributes = True
 
+class ComensalMini(BaseModel):
+    """Lo mínimo para pintar a un comensal en el mapa del salón."""
+    id_comensal: int
+    nombre: str
+    avatar: Optional[str] = None
+    estado_sesion: str
+
+    class Config:
+        from_attributes = True
+
 class MesaResponse(BaseModel):
     id_mesa: int
     id_restaurante: int
@@ -18,6 +28,9 @@ class MesaResponse(BaseModel):
     estado: str
     codigo_qr: Optional[str] = None
     restaurante: Optional[RestauranteMini] = None
+    # El panel necesita saber quién está sentado: sin esto el mapa de mesas
+    # y el detalle de la mesa salían siempre vacíos.
+    comensales: List[ComensalMini] = []
 
     class Config:
         from_attributes = True

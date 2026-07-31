@@ -98,6 +98,33 @@ export const getMesa = async (idMesa) => {
   }
 }
 
+/**
+ * Comensales realmente unidos a la mesa. Alimenta el Lobby y el pedido
+ * grupal, en lugar de la lista mock que había cableada en el componente.
+ */
+export const getComensalesDeMesa = async (idMesa) => {
+  try {
+    const res = await fetchWithTimeout(`${API_URL}/mesas/${idMesa}/comensales`)
+    if (!res.ok) throw new Error('Error')
+    return await res.json()
+  } catch {
+    // Sin backend solo conocemos al comensal de este dispositivo.
+    try {
+      const propio = JSON.parse(localStorage.getItem('swifttable_user') || 'null')
+      if (propio && propio.nombre) {
+        return [{
+          id_comensal: propio.id,
+          nombre: propio.nombre,
+          avatar: propio.avatar,
+          estado_sesion: 'activa',
+          id_mesa: parseInt(idMesa)
+        }]
+      }
+    } catch { /* localStorage ilegible */ }
+    return []
+  }
+}
+
 export const validarPin = async (idMesa, pin) => {
   try {
     const res = await fetchWithTimeout(`${API_URL}/mesas/${idMesa}/validar-pin`, {
@@ -130,17 +157,108 @@ export const crearComensal = async (nombre, avatar, idMesa) => {
   }
 }
 
-export const enviarPedido = async (idMesa, items) => {
+/**
+ * Manda el pedido a cocina.
+ *
+ * El backend lo modela en dos pasos: primero la cabecera del pedido y
+ * después una línea por producto. Antes se enviaba todo junto en un solo
+ * POST con un campo `items` que el esquema PedidoCreate ni siquiera acepta,
+ * así que el pedido nunca llegaba a la cocina.
+ */
+export const enviarPedido = async (idMesa, items, idComensal = null) => {
   try {
     const res = await fetchWithTimeout(`${API_URL}/pedidos/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id_mesa: parseInt(idMesa), items })
+      body: JSON.stringify({
+        id_mesa: parseInt(idMesa),
+        id_comensal: idComensal ? parseInt(idComensal) : null
+      })
+    })
+    if (!res.ok) throw new Error('No se pudo crear el pedido')
+    const pedido = await res.json()
+
+    // Cada plato del carrito es un detalle. El backend toma el precio del
+    // producto, así que aquí solo viajan producto y cantidad.
+    const lineas = await Promise.all(items.map(async (it) => {
+      try {
+        const dRes = await fetchWithTimeout(`${API_URL}/detalles_pedido/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id_pedido: pedido.id_pedido,
+            id_producto: it.id_producto,
+            cantidad: it.cantidad
+          })
+        })
+        return dRes.ok
+      } catch {
+        return false
+      }
+    }))
+
+    const fallidas = lineas.filter(ok => !ok).length
+    if (fallidas > 0) {
+      console.warn(`${fallidas} de ${items.length} platos no se registraron en el pedido ${pedido.id_pedido}`)
+    }
+
+    return { ...pedido, itemsFallidos: fallidas }
+  } catch (e) {
+    console.warn('Backend no disponible, guardando el pedido en local:', e)
+    return guardarMockPedidoLocal(idMesa, items, idComensal)
+  }
+}
+
+/* Sin backend, el pedido se registra en el mock local para que cocina y caja
+   sigan mostrando algo coherente durante la demostración. */
+const guardarMockPedidoLocal = (idMesa, items, idComensal) => {
+  const pedido = {
+    id_pedido: Date.now(),
+    id_mesa: parseInt(idMesa),
+    id_comensal: idComensal || null,
+    estado: 'pendiente',
+    fecha_hora: new Date().toISOString(),
+    items: items.map(it => ({
+      nombre: it.nombre,
+      cantidad: it.cantidad,
+      precio: it.precio
+    }))
+  }
+  try {
+    const todos = getMockPedidosLocales()
+    const clave = String(idMesa)
+    todos[clave] = [...(todos[clave] || []), pedido]
+    localStorage.setItem('swifttable_mock_pedidos', JSON.stringify(todos))
+  } catch (e) {
+    console.error(e)
+  }
+  return pedido
+}
+
+/**
+ * Cambia el estado de la mesa (libre / ocupada / por_limpiar).
+ * Nada marcaba la mesa como ocupada, así que el mapa del salón mostraba
+ * todo libre aunque hubiera gente sentada.
+ */
+export const actualizarEstadoMesa = async (idMesa, estado) => {
+  try {
+    const res = await fetchWithTimeout(`${API_URL}/mesas/${idMesa}/estado`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ estado })
     })
     if (!res.ok) throw new Error('Error')
     return await res.json()
   } catch {
-    return { id_pedido: Date.now(), estado: 'en_preparacion' }
+    try {
+      const mesas = getMockMesasLocales().map(m =>
+        m.id_mesa === parseInt(idMesa) ? { ...m, estado } : m
+      )
+      localStorage.setItem('swifttable_mock_mesas', JSON.stringify(mesas))
+    } catch (e) {
+      console.error(e)
+    }
+    return { id_mesa: parseInt(idMesa), estado }
   }
 }
 
@@ -288,9 +406,14 @@ const getMockMesasLocales = () => {
   }
 };
 
-export const getMesas = async () => {
+export const getMesas = async (idRestaurante = null) => {
   try {
-    const res = await fetchWithTimeout(`${API_URL}/mesas/`);
+    // El panel pasa el restaurante activo: sin este filtro un local veía
+    // las mesas de todos los demás.
+    const url = idRestaurante
+      ? `${API_URL}/mesas/?id_restaurante=${idRestaurante}`
+      : `${API_URL}/mesas/`;
+    const res = await fetchWithTimeout(url);
     if (!res.ok) throw new Error('Error');
     const data = await res.json();
     // Ordenar mesas por número ascendente

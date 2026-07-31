@@ -1,227 +1,240 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Flame, QrCode, Shield, Check, X, AlertCircle } from 'lucide-react'
+import { QrCode, Shield, X, ChevronRight } from 'lucide-react'
 import { useToast } from '../components/Toast'
 import { getMesas } from '../services/api'
+import { aplicarAcento } from '../theme/sala'
+
+/* Accesos de demostración del panel, uno por restaurante. */
+const ACCESOS_STAFF = {
+  '1234': { id: 1, nombre: 'La Fogata' },
+  '4321': { id: 2, nombre: 'Pizzería Italia' }
+}
 
 export default function SelectorRol() {
   const navigate = useNavigate()
   const { toast } = useToast()
-  
-  const [rolSeleccionado, setRolSeleccionado] = useState(null) // 'cliente' | 'staff' | null
-  const [mesaElegida, setMesaElegida] = useState('')
+
+  // Qué está mostrando la pantalla: la portada, el selector de mesa o el PIN del personal.
+  const [vista, setVista] = useState('inicio')
   const [pinPersonal, setPinPersonal] = useState('')
   const [intentosError, setIntentosError] = useState(false)
-  const [mesasDisponibles, setMesasDisponibles] = useState([])
+  const [mesas, setMesas] = useState([])
+  const [cargandoMesas, setCargandoMesas] = useState(false)
 
   useEffect(() => {
-    // Limpiar caché antigua de desarrollo una sola vez para forzar carga limpia
+    // Limpieza única de caché antigua de desarrollo.
     if (!localStorage.getItem('swifttable_v2_clean')) {
-      localStorage.clear();
-      localStorage.setItem('swifttable_v2_clean', 'true');
-      window.location.reload();
-      return;
+      localStorage.clear()
+      localStorage.setItem('swifttable_v2_clean', 'true')
+      window.location.reload()
     }
+  }, [])
 
-    if (rolSeleccionado === 'cliente') {
-      const cargarMesas = async () => {
-        try {
-          const data = await getMesas()
-          setMesasDisponibles(data || [])
-        } catch (e) {
-          console.error(e)
-        }
-      }
-      cargarMesas()
-    }
-  }, [rolSeleccionado])
-
-  const handleEntrarComoCliente = (e) => {
-    e.preventDefault()
-    if (!mesaElegida) {
-      toast('Por favor, selecciona una mesa', 'error')
-      return
-    }
-    toast(`Accediendo a Mesa ${mesaElegida}`, 'success')
-    navigate(`/mesa/${mesaElegida}`)
-  }
+  useEffect(() => {
+    if (vista !== 'cliente') return
+    let vivo = true
+    setCargandoMesas(true)
+    getMesas()
+      .then(data => { if (vivo) setMesas(data || []) })
+      .catch(() => { if (vivo) setMesas([]) })
+      .finally(() => { if (vivo) setCargandoMesas(false) })
+    return () => { vivo = false }
+  }, [vista])
 
   const handleEntrarComoPersonal = (e) => {
     e.preventDefault()
-    // El PIN de simulación será "4321" o "1234"
-    if (pinPersonal === '1234') {
-      localStorage.setItem('swifttable_id_restaurante', '1')
-      localStorage.setItem('swifttable_nombre_restaurante', 'La Fogata')
-      toast('Acceso concedido a Logística - La Fogata', 'success')
-      navigate('/logistica')
-    } else if (pinPersonal === '4321') {
-      localStorage.setItem('swifttable_id_restaurante', '2')
-      localStorage.setItem('swifttable_nombre_restaurante', 'Pizzería Italia')
-      toast('Acceso concedido a Logística - Pizzería Italia', 'success')
-      navigate('/logistica')
-    } else {
+    const acceso = ACCESOS_STAFF[pinPersonal]
+
+    if (!acceso) {
       setIntentosError(true)
       setPinPersonal('')
-      toast('PIN incorrecto. Reintente.', 'error')
+      toast('PIN incorrecto. Inténtalo de nuevo.', 'error')
       setTimeout(() => setIntentosError(false), 2000)
+      return
     }
+
+    localStorage.setItem('swifttable_id_restaurante', String(acceso.id))
+    localStorage.setItem('swifttable_nombre_restaurante', acceso.nombre)
+    aplicarAcento(acceso.id)
+    toast(`Bienvenido al panel de ${acceso.nombre}`, 'success')
+    navigate('/logistica')
   }
 
   return (
-    <>
-      {/* Native App Bar */}
-      <div className="native-app-bar" style={{ background: 'transparent', border: 'none', backdropFilter: 'none' }}>
-        <div className="left-action"></div>
-        <div className="title" style={{ color: 'var(--text-1)' }}></div>
-        <div className="right-action"></div>
-      </div>
+    <div className="st-screen">
+      <div
+        className="st-glow"
+        style={{ top: -80, right: -60, width: 260, height: 260, background: 'var(--st-accent)', opacity: 0.35 }}
+      />
 
-      <div className="content-wrapper flex-col" style={{ padding: '0 24px 24px', marginTop: '-20px' }}>
-        
-        {/* Header Hero */}
-        <div style={{ textAlign: 'center', marginBottom: '32px', marginTop: '16px' }}>
-          <div style={{ 
-            width: '72px', height: '72px', borderRadius: '22px', 
-            background: 'linear-gradient(135deg, var(--accent), var(--accent-2))', color: 'white',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 16px',
-            boxShadow: '0 10px 20px rgba(225, 77, 42, 0.25)'
-          }}>
-            <Flame size={36} strokeWidth={2.5} />
+      <div className="st-body" style={{ paddingTop: 'calc(40px + var(--safe-top))' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div
+            className="st-tile"
+            style={{
+              width: 66, height: 66, borderRadius: 22, margin: '0 auto 16px',
+              background: 'var(--st-lime)', color: 'var(--st-ink)', fontSize: 34,
+              boxShadow: '0 6px 0 var(--st-lime-deep)'
+            }}
+          >
+            S
           </div>
-          <h1 className="title-large" style={{ fontSize: '32px', letterSpacing: '-0.03em', color: 'var(--text-1)', marginBottom: '4px' }}>
-            SwiftTable
-          </h1>
-          <p style={{ fontSize: '14px', color: 'var(--text-3)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Sistema de Mesa Virtual
-          </p>
+          <h1 className="st-h1" style={{ fontSize: 40 }}>SwiftTable</h1>
+          <p className="st-label" style={{ marginTop: 6 }}>Pedidos de mesa, sin app y sin esperas</p>
         </div>
 
-        {rolSeleccionado === null ? (
-          <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            
-            {/* Opción Cliente (Informativa, exige QR) */}
-            <div 
-              className="card animate-pop" 
-              style={{ 
-                padding: '24px', 
-                borderRadius: '20px', 
-                background: 'var(--surface)', 
-                border: '1.5px solid var(--border)',
-                textAlign: 'center',
-                boxShadow: 'var(--shadow-sm)'
+        {vista === 'inicio' ? (
+          <div style={{ marginTop: 34, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <button
+              className="st-card st-pop"
+              onClick={() => setVista('cliente')}
+              style={{
+                display: 'flex', flexDirection: 'column', gap: 12, textAlign: 'left',
+                cursor: 'pointer', color: 'var(--st-text-1)'
               }}
             >
-              <div style={{ 
-                width: '48px', height: '48px', borderRadius: '14px', 
-                background: 'var(--accent-bg)', color: 'var(--accent)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto 16px'
-              }}>
-                <QrCode size={24} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span
+                  className="st-tile"
+                  style={{ width: 48, height: 48, borderRadius: 15, background: 'var(--st-accent)', color: '#fff' }}
+                >
+                  <QrCode size={24} strokeWidth={2.2} />
+                </span>
+                <ChevronRight size={22} color="var(--st-border-2)" />
               </div>
-              <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-1)', marginBottom: '6px' }}>
-                Acceso para Clientes
-              </h3>
-              <p style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: 1.5 }}>
-                Para empezar a pedir platos, llama al mozo y ver tu cuenta, **por favor escanea el código QR impreso en tu mesa física**.
-              </p>
-            </div>
-
-            {/* Opción Personal */}
-            <div 
-              className="card animate-pop" 
-              onClick={() => setRolSeleccionado('staff')}
-              style={{ 
-                padding: '24px', 
-                borderRadius: '20px', 
-                background: 'var(--surface)', 
-                border: '1.5px solid var(--border)',
-                cursor: 'pointer',
-                textAlign: 'center',
-                boxShadow: 'var(--shadow-sm)',
-                transition: 'all 0.2s'
-              }}
-            >
-              <div style={{ 
-                width: '48px', height: '48px', borderRadius: '14px', 
-                background: 'var(--blue-bg)', color: 'var(--blue)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto 16px'
-              }}>
-                <Shield size={24} />
-              </div>
-              <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-1)', marginBottom: '6px' }}>
-                Soy Personal del Restaurante
-              </h3>
-              <p style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: 1.4 }}>
-                Acceso KDS para cocina, alertas activas para salón y cobros/boletas en caja registradora.
-              </p>
-            </div>
-
-          </div>
-        ) : (
-          /* Formulario Staff / Ingreso de PIN */
-          <form onSubmit={handleEntrarComoPersonal} className="card animate-pop" style={{ padding: '24px', borderRadius: '20px', background: 'var(--surface)', border: '1.5px solid var(--border)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--blue)', textTransform: 'uppercase' }}>
-                Acceso Personal
+              <span className="st-h2" style={{ fontSize: 21 }}>¿Vienes a comer?</span>
+              <span className="st-lead" style={{ fontSize: 14.5 }}>
+                Normalmente entras escaneando el QR de tu mesa. Si ya estás sentado, también puedes elegirla aquí.
               </span>
-              <button 
-                type="button" 
-                onClick={() => { setRolSeleccionado(null); setPinPersonal(''); }}
-                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-3)' }}
+            </button>
+
+            <button
+              className="st-card st-pop"
+              onClick={() => setVista('staff')}
+              style={{
+                display: 'flex', flexDirection: 'column', gap: 12, textAlign: 'left',
+                cursor: 'pointer', color: 'var(--st-text-1)', animationDelay: '0.1s'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span
+                  className="st-tile"
+                  style={{ width: 48, height: 48, borderRadius: 15, background: 'var(--st-violet)', color: '#fff' }}
+                >
+                  <Shield size={24} strokeWidth={2.2} />
+                </span>
+                <ChevronRight size={22} color="var(--st-border-2)" />
+              </div>
+              <span className="st-h2" style={{ fontSize: 21 }}>Trabajo aquí</span>
+              <span className="st-lead" style={{ fontSize: 14.5 }}>
+                Panel de salón, pantalla de cocina y caja registradora.
+              </span>
+            </button>
+          </div>
+        ) : vista === 'cliente' ? (
+          <div className="st-card st-pop" style={{ marginTop: 34, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="st-label" style={{ color: 'var(--st-accent)' }}>Elige tu mesa</span>
+              <button
+                type="button"
+                className="st-back"
+                style={{ width: 32, height: 32 }}
+                onClick={() => setVista('inicio')}
+                aria-label="Volver"
               >
-                <X size={20} />
+                <X size={17} strokeWidth={2.4} />
               </button>
             </div>
 
-            <h3 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-1)', marginBottom: '12px' }}>
-              Ingresa PIN de Seguridad
-            </h3>
-            <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '20px', lineHeight: '1.4' }}>
-              Introduce el PIN de empleado asignado para acceder a los módulos de cocina, meseros y cobros.
+            <h2 className="st-h2" style={{ fontSize: 22 }}>¿En qué mesa estás?</h2>
+            <p className="st-lead" style={{ fontSize: 14 }}>
+              Después te pedimos el PIN de 4 dígitos que está en el centro de la mesa.
             </p>
 
-            <div style={{ marginBottom: '24px', position: 'relative' }}>
-              <input
-                type="password"
-                maxLength={4}
-                placeholder="••••"
-                value={pinPersonal}
-                onChange={(e) => setPinPersonal(e.target.value.replace(/\D/g, ''))}
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  letterSpacing: '12px',
-                  textAlign: 'center',
-                  borderRadius: '12px',
-                  background: intentosError ? 'var(--red-bg)' : 'var(--bg)',
-                  border: intentosError ? '1.5px solid var(--red)' : '1.5px solid var(--border)',
-                  color: 'var(--text-1)',
-                  fontSize: '24px',
-                  fontWeight: '800',
-                  outline: 'none',
-                  fontFamily: 'inherit',
-                  transition: 'all 0.15s'
-                }}
-              />
-              <span style={{ fontSize: '10px', color: 'var(--text-3)', display: 'block', textAlign: 'center', marginTop: '8px' }}>
-                PIN Demo: 4321 o 1234
-              </span>
+            {cargandoMesas ? (
+              <div className="st-empty">Buscando mesas…</div>
+            ) : mesas.length === 0 ? (
+              <div className="st-empty">No hay mesas configuradas en este local.</div>
+            ) : (
+              <div className="st-tables">
+                {mesas.map(m => {
+                  const ocupada = m.estado === 'ocupada'
+                  return (
+                    <button
+                      key={m.id_mesa}
+                      className={`st-mesa ${ocupada ? 'st-mesa--ocupada' : 'st-mesa--libre'}`}
+                      onClick={() => navigate(`/mesa/${m.id_mesa}`)}
+                      aria-label={`Entrar a la mesa ${m.numero}`}
+                    >
+                      <span className="st-mesa__n">M{m.numero}</span>
+                      <span
+                        className="st-mesa__estado"
+                        style={{ color: ocupada ? 'var(--st-cyan)' : 'var(--st-lime)' }}
+                      >
+                        {ocupada ? 'Con gente' : 'Libre'}
+                      </span>
+                      {/* El PIN solo viaja en los datos de prueba: con backend real no se expone. */}
+                      {m.pin && (
+                        <span className="st-label" style={{ marginTop: 3, fontSize: 9 }}>PIN {m.pin}</span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        ) : (
+          <form onSubmit={handleEntrarComoPersonal} className="st-card st-pop" style={{ marginTop: 34, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="st-label" style={{ color: '#c9b4ff' }}>Acceso del personal</span>
+              <button
+                type="button"
+                className="st-back"
+                style={{ width: 32, height: 32 }}
+                onClick={() => { setVista('inicio'); setPinPersonal('') }}
+                aria-label="Volver"
+              >
+                <X size={17} strokeWidth={2.4} />
+              </button>
             </div>
 
-            <button 
-              type="submit" 
-              className="wf-btn-solid"
-              style={{ width: '100%', padding: '14px', fontSize: '15px', borderRadius: '12px', margin: 0, background: 'var(--blue)', boxShadow: 'none' }}
-            >
-              Ingresar a Logística
+            <h2 className="st-h2" style={{ fontSize: 22 }}>Tu PIN de empleado</h2>
+
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              placeholder="••••"
+              value={pinPersonal}
+              onChange={e => setPinPersonal(e.target.value.replace(/\D/g, ''))}
+              autoFocus
+              style={{
+                width: '100%',
+                padding: 16,
+                letterSpacing: '14px',
+                textIndent: '14px',
+                textAlign: 'center',
+                borderRadius: 'var(--st-r-md)',
+                background: 'var(--st-bg)',
+                border: `2px solid ${intentosError ? '#FF6B76' : 'var(--st-border)'}`,
+                color: 'var(--st-text-1)',
+                fontFamily: 'var(--st-display)',
+                fontSize: 26,
+                fontWeight: 800,
+                outline: 'none',
+                transition: 'border-color 0.15s ease'
+              }}
+            />
+
+            <p className="st-label" style={{ textAlign: 'center' }}>PIN de demostración: 1234 o 4321</p>
+
+            <button type="submit" className="st-btn st-btn--primary st-btn--sm" disabled={pinPersonal.length < 4}>
+              Entrar al panel
             </button>
           </form>
         )}
-
       </div>
-    </>
+    </div>
   )
 }

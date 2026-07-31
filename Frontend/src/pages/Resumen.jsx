@@ -1,152 +1,227 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ChevronLeft, Smartphone, CreditCard, Banknote } from 'lucide-react'
-import { pedirCuenta } from '../services/api'
+import { Smartphone, CreditCard, Banknote, Info, X } from 'lucide-react'
+import { pedirCuenta, getComensalesDeMesa, getPedidosDeMesa } from '../services/api'
 import { useToast } from '../components/Toast'
+import TopBar from '../components/TopBar'
 
-const METODOS_PAGO = [
-  { id: 'yape', label: 'Yape / Plin', sub: 'Pago instantáneo por QR', icon: Smartphone, color: '#8b5cf6' },
-  { id: 'tarjeta', label: 'Tarjeta', sub: 'Visa, Mastercard', icon: CreditCard, color: '#3b82f6' },
-  { id: 'efectivo', label: 'Efectivo', sub: 'El mesero traerá el vuelto', icon: Banknote, color: '#10b981' }
+const METODOS = [
+  { id: 'yape',     label: 'Yape / Plin', icono: Smartphone },
+  { id: 'tarjeta',  label: 'Tarjeta',     icono: CreditCard },
+  { id: 'efectivo', label: 'Efectivo',    icono: Banknote }
 ]
+
+const PROPINAS = [0, 0.05, 0.10, 0.15]
 
 export default function Resumen() {
   const { idMesa } = useParams()
   const navigate = useNavigate()
   const { toast } = useToast()
 
-  const [metodoPago, setMetodoPago] = useState('yape')
-  const [propinaIdx, setPropinaIdx] = useState(1) // 0=0%, 1=5%, 2=10%
-  const [solicitando, setSolicitando] = useState(false)
+  const user = JSON.parse(localStorage.getItem('swifttable_user') || '{}')
+  const miCarrito = JSON.parse(localStorage.getItem('swifttable_carrito') || '[]')
+  const modoPago = user.modoPago || 'individual'
 
-  const handlePedirCuenta = async () => {
+  const [metodoPago, setMetodoPago] = useState('yape')
+  const [propinaIdx, setPropinaIdx] = useState(1)
+  const [solicitando, setSolicitando] = useState(false)
+  const [hojaPago, setHojaPago] = useState(false)
+
+  const [comensales, setComensales] = useState([])
+  const [pedidos, setPedidos] = useState([])
+
+  useEffect(() => {
+    let vivo = true
+    Promise.all([getComensalesDeMesa(idMesa), getPedidosDeMesa(idMesa)]).then(([lista, peds]) => {
+      if (!vivo) return
+      setComensales(lista.filter(c => c.estado_sesion !== 'inactiva'))
+      setPedidos(peds || [])
+    })
+    return () => { vivo = false }
+  }, [idMesa])
+
+  const sumar = (items) => items.reduce((s, i) => s + Number(i.precio || 0) * (i.cantidad || 1), 0)
+
+  const misEnviados = pedidos.filter(p => p.id_comensal === user.id).flatMap(p => p.items || [])
+  const misItems = [...misEnviados, ...miCarrito]
+  const miConsumo = sumar(misItems)
+  const totalMesa = sumar(pedidos.flatMap(p => p.items || [])) + sumar(miCarrito)
+  const personas = comensales.length || 1
+
+  /* Lo que te toca depende del modo que eligió la mesa. */
+  let subtotal = miConsumo
+  let explicacion = `Tu consumo (${misItems.length} ${misItems.length === 1 ? 'plato' : 'platos'})`
+
+  if (modoPago === 'partes_iguales') {
+    subtotal = totalMesa / personas
+    explicacion = `Tu parte (1 de ${personas})`
+  } else if (modoPago === 'lider' && user.isLider) {
+    subtotal = totalMesa
+    explicacion = 'Toda la mesa (tú invitas)'
+  } else if (modoPago === 'lider') {
+    subtotal = 0
+    explicacion = 'Invita el anfitrión'
+  }
+
+  const servicio = subtotal * 0.10
+  const pctPropina = PROPINAS[propinaIdx]
+  const propinaMonto = subtotal * pctPropina
+  const totalFinal = subtotal + servicio + propinaMonto
+
+  const handlePedirBoleta = async () => {
     setSolicitando(true)
     try {
       await pedirCuenta(idMesa)
-      toast('Solicitud de cuenta enviada al mozo.', 'success')
+      toast('El mozo traerá la boleta a su mesa.', 'success')
     } catch (e) {
-      toast('Error al solicitar la cuenta', 'error')
+      toast('No pudimos avisar al mozo', 'error')
     } finally {
       setSolicitando(false)
     }
   }
 
-  const user = JSON.parse(localStorage.getItem('swifttable_user') || '{"nombre":"Carlos","isLider":true}')
-  const isLider = user.isLider || false
-
-  const miCarrito = JSON.parse(localStorage.getItem('swifttable_carrito') || '[]')
-  const miTotal = miCarrito.reduce((s, p) => s + Number(p.precio || 0) * (p.cantidad || 1), 0)
-
-  const pedidosMesa = [
-    { nombre: user.nombre, isLider: user.isLider, precio: miTotal },
-    { nombre: 'Ana', isLider: false, precio: 37.00 },
-    { nombre: 'Luis', isLider: false, precio: 23.00 },
-  ]
-
-  const subtotal = (isLider && user.modoPago === 'lider')
-    ? pedidosMesa.reduce((s, p) => s + p.precio, 0)
-    : miTotal
-
-  const servicio = subtotal * 0.10
-  const pctPropina = propinaIdx === 0 ? 0 : propinaIdx === 1 ? 0.05 : 0.10
-  const propinaMonto = subtotal * pctPropina
-  const totalFinal = subtotal + servicio + propinaMonto
-
-  const restName = localStorage.getItem('swifttable_nombre_restaurante') || 'SwiftTable'
+  /* Reemplaza al alert() nativo: confirma y avisa al mozo de verdad. */
+  const confirmarPago = async () => {
+    setHojaPago(false)
+    const metodo = METODOS.find(m => m.id === metodoPago)
+    try {
+      await pedirCuenta(idMesa)
+      toast(`Listo: el mozo viene a cobrar con ${metodo.label}.`, 'success')
+    } catch (e) {
+      toast('No pudimos avisar al mozo', 'error')
+    }
+  }
 
   return (
-    <>
-      <div className="native-app-bar">
-        <div className="left-action">
-          <button className="wf-btn-ghost" onClick={() => navigate(-1)} style={{ padding: 0 }}>
-            <ChevronLeft size={28} color="var(--accent)" />
-          </button>
+    <div className="st-screen st-screen--light">
+      <div className="st-darkhead" style={{ paddingBottom: 22 }}>
+        <TopBar meta={`Mesa ${idMesa} · Tu parte`} onBack={() => navigate(-1)} />
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center', paddingTop: 18 }}>
+          <span className="st-label">Total a pagar</span>
+          <span className="st-num" style={{ fontSize: 52, color: 'var(--st-lime)' }}>
+            S/ {totalFinal.toFixed(2)}
+          </span>
         </div>
-        <div className="title">{restName}</div>
-        <div className="right-action"></div>
       </div>
 
-      <div className="content-wrapper">
-
-        <div style={{ padding: '24px 0 16px', textAlign: 'center' }}>
-          <div style={{ fontSize: '15px', color: 'var(--text-2)' }}>Total a Pagar</div>
-          <div style={{ fontSize: '48px', fontWeight: '800', letterSpacing: '-0.03em' }}>
-            S/ {totalFinal.toFixed(2)}
-          </div>
-        </div>
-
-        {/* Desglose */}
-        <div className="card" style={{ padding: '16px 20px', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '15px' }}>
-            <span style={{ color: 'var(--text-2)' }}>Subtotal</span>
-            <span>S/ {subtotal.toFixed(2)}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '15px' }}>
-            <span style={{ color: 'var(--text-2)' }}>Servicio (10%)</span>
-            <span>S/ {servicio.toFixed(2)}</span>
-          </div>
+      <div className="st-body" style={{ padding: '18px 18px 0', gap: 14 }}>
+        <div className="st-bill">
+          <div className="st-bill__row"><span>{explicacion}</span><b>S/ {subtotal.toFixed(2)}</b></div>
+          <div className="st-bill__row"><span>Servicio 10%</span><b>S/ {servicio.toFixed(2)}</b></div>
           {propinaMonto > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '15px' }}>
-              <span style={{ color: 'var(--text-2)' }}>Propina ({(pctPropina * 100).toFixed(0)}%)</span>
-              <span>S/ {propinaMonto.toFixed(2)}</span>
+            <div className="st-bill__row">
+              <span>Propina {(pctPropina * 100).toFixed(0)}%</span>
+              <b>S/ {propinaMonto.toFixed(2)}</b>
             </div>
           )}
+          <div className="st-bill__rule" />
+          <div className="st-bill__row" style={{ alignItems: 'center' }}>
+            <span style={{ fontFamily: 'var(--st-display)', fontWeight: 800, fontSize: 19, color: 'var(--st-dark-1)' }}>Total</span>
+            <span className="st-num" style={{ fontSize: 22, color: 'var(--st-dark-1)' }}>S/ {totalFinal.toFixed(2)}</span>
+          </div>
         </div>
 
-        <div className="section-label">Propina sugerida</div>
-        <div className="segmented-control">
-          {[0, 0.05, 0.10].map((val, idx) => (
-            <div
-              key={idx}
-              className={`segment-btn ${propinaIdx === idx ? 'active' : ''}`}
-              onClick={() => setPropinaIdx(idx)}
-            >
-              {val === 0 ? 'Nada' : `${val * 100}%`}
-            </div>
-          ))}
-        </div>
-
-        <div className="section-label" style={{ marginTop: '24px' }}>Método de pago</div>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {METODOS_PAGO.map(m => {
-            const isSelected = metodoPago === m.id
-            return (
-              <div
-                key={m.id}
-                className={`pago-option ${isSelected ? 'selected' : ''}`}
-                onClick={() => setMetodoPago(m.id)}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+          <div className="st-label">Propina para la cocina</div>
+          <div className="st-tips" role="radiogroup" aria-label="Propina">
+            {PROPINAS.map((val, idx) => (
+              <button
+                key={val}
+                role="radio"
+                aria-checked={propinaIdx === idx}
+                className={`st-tip ${propinaIdx === idx ? 'st-tip--on' : ''}`}
+                onClick={() => setPropinaIdx(idx)}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <m.icon size={24} color={isSelected ? m.color : 'var(--text-3)'} />
-                  <div>
-                    <div style={{ fontSize: '16px', fontWeight: '600' }}>{m.label}</div>
-                    <div style={{ fontSize: '13px', color: 'var(--text-2)' }}>{m.sub}</div>
-                  </div>
-                </div>
-                <div className="pago-option-radio" />
-              </div>
-            )
-          })}
+                {val * 100}%
+              </button>
+            ))}
+          </div>
         </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+          <div className="st-label">Cómo pagas</div>
+          <div className="st-pays" role="radiogroup" aria-label="Método de pago">
+            {METODOS.map(m => {
+              const Icono = m.icono
+              const activo = metodoPago === m.id
+              return (
+                <button
+                  key={m.id}
+                  role="radio"
+                  aria-checked={activo}
+                  className={`st-pay ${activo ? 'st-pay--on' : ''}`}
+                  onClick={() => setMetodoPago(m.id)}
+                >
+                  <Icono size={22} strokeWidth={2.2} color={activo ? '#fff' : 'var(--st-dark-3)'} />
+                  <span>{m.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {personas > 1 && modoPago !== 'lider' && (
+          <div
+            className="st-note"
+            style={{ background: 'rgba(184,241,78,0.28)', border: '2px solid var(--st-lime)', color: '#3f5514' }}
+          >
+            <Info size={19} strokeWidth={2.4} color="#4f6b18" style={{ flexShrink: 0 }} />
+            <span>
+              {personas - 1 === 1 ? 'La otra persona paga' : `Las otras ${personas - 1} personas pagan`} su parte por
+              separado. La mesa se cierra cuando todos terminen.
+            </span>
+          </div>
+        )}
       </div>
 
-      <div className="native-bottom-bar" style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '16px' }}>
+      <div className="st-dock" style={{ flexDirection: 'column', gap: 9, alignItems: 'stretch' }}>
         <button
-          className="wf-btn-outline"
-          style={{ width: '100%', padding: '16px', fontSize: '16px' }}
-          onClick={handlePedirCuenta}
-          disabled={solicitando}
-        >
-          {solicitando ? 'Enviando...' : 'Pedir Cuenta al Mozo'}
-        </button>
-        <button
-          className="wf-btn-solid"
-          style={{ width: '100%', padding: '16px', margin: 0, fontSize: '16px' }}
-          onClick={() => alert(`Pagando S/ ${totalFinal.toFixed(2)}`)}
+          className="st-btn st-btn--primary st-btn--sm"
+          onClick={() => setHojaPago(true)}
+          disabled={totalFinal <= 0}
         >
           Pagar S/ {totalFinal.toFixed(2)}
         </button>
+        <button className="st-btn st-btn--outline" onClick={handlePedirBoleta} disabled={solicitando}>
+          {solicitando ? 'Avisando…' : 'Que el mozo traiga la boleta'}
+        </button>
       </div>
-    </>
+
+      {hojaPago && (
+        <div className="st-sheet-backdrop" onClick={() => setHojaPago(false)} role="dialog" aria-modal="true">
+          <div className="st-sheet" onClick={e => e.stopPropagation()}>
+            <div className="st-sheet__grip" />
+
+            <h2 className="st-h2" style={{ fontSize: 24 }}>Confirma tu pago</h2>
+
+            <div className="st-card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="st-label">Monto</span>
+                <span className="st-num" style={{ fontSize: 28, color: 'var(--st-lime)' }}>S/ {totalFinal.toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="st-label">Método</span>
+                <span style={{ fontWeight: 700, fontSize: 15 }}>
+                  {METODOS.find(m => m.id === metodoPago).label}
+                </span>
+              </div>
+            </div>
+
+            <p className="st-lead" style={{ fontSize: 14 }}>
+              Avisaremos al mozo para que se acerque a cobrar. El pago se completa en la mesa.
+            </p>
+
+            <button className="st-btn st-btn--primary st-btn--sm" onClick={confirmarPago}>
+              Avisar al mozo
+            </button>
+            <button className="st-btn st-btn--outline" onClick={() => setHojaPago(false)}>
+              <X size={16} strokeWidth={2.6} style={{ verticalAlign: '-3px', marginRight: 6 }} />
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

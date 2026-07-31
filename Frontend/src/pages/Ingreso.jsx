@@ -1,28 +1,31 @@
 import React, { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { User, ChevronLeft } from 'lucide-react'
-import { crearComensal } from '../services/api'
+import { crearComensal, actualizarEstadoMesa } from '../services/api'
 import { useToast } from '../components/Toast'
+import TopBar from '../components/TopBar'
+import StepBar from '../components/StepBar'
+import { COLORES_COMENSAL, inicial } from '../theme/sala'
 
-const AVATARES = ['🐶', '🐱', '🦊', '🐸', '🦁', '🐻', '🐼', '🐨', '🐯', '🐮', '🐷', '🐵']
+const MAX_NOMBRE = 15
 
 export default function Ingreso() {
   const { idMesa } = useParams()
   const navigate = useNavigate()
   const { toast } = useToast()
-  
+
   const [nombre, setNombre] = useState('')
-  const [avatar, setAvatar] = useState('🐱')
+  // El color es la identidad del comensal en la sala; se guarda como hex.
+  const [color, setColor] = useState(COLORES_COMENSAL[0].hex)
   const [cargando, setCargando] = useState(false)
 
   const handleUnirse = async () => {
     if (!nombre.trim()) {
-      toast('Ingresa tu nombre para continuar', 'error')
+      toast('Escribe tu nombre para continuar', 'error')
       return
     }
 
     setCargando(true)
-    const nuevoComensal = await crearComensal(nombre.trim(), avatar, idMesa)
+    const nuevoComensal = await crearComensal(nombre.trim(), color, idMesa)
     setCargando(false)
 
     if (nuevoComensal) {
@@ -31,72 +34,116 @@ export default function Ingreso() {
         nombre: nuevoComensal.nombre,
         avatar: nuevoComensal.avatar,
         idMesa,
-        isLider: true, 
-        modoPago: 'individual' 
+        isLider: true,
+        modoPago: 'individual'
       }))
+
+      // Con alguien sentado, la mesa deja de estar libre: así el panel del
+      // salón la ve ocupada y el comensal no queda fuera de la sesión.
+      actualizarEstadoMesa(idMesa, 'ocupada').catch(() => {})
+
       navigate(`/mesa/${idMesa}/lobby`)
     } else {
-      toast('Error al ingresar', 'error')
+      toast('No pudimos sumarte a la mesa', 'error')
     }
   }
 
-  const restName = localStorage.getItem('swifttable_nombre_restaurante') || 'SwiftTable'
+  const elegido = COLORES_COMENSAL.find(c => c.hex === color) || COLORES_COMENSAL[0]
+  const letra = inicial(nombre)
 
   return (
-    <>
-      <div className="native-app-bar">
-        <div className="left-action">
-          <button className="wf-btn-ghost" onClick={() => navigate(-1)} style={{ padding: 0 }}>
-            <ChevronLeft size={28} color="var(--accent)" />
-          </button>
-        </div>
-        <div className="title">{restName}</div>
-        <div className="right-action"></div>
+    <div className="st-screen">
+      <TopBar meta={`Mesa ${idMesa}`} onBack={() => navigate(-1)} />
+
+      <div style={{ padding: '22px 22px 0' }}>
+        <StepBar paso={1} />
       </div>
 
-      <div className="content-wrapper flex-col">
-        <div style={{ textAlign: 'center', margin: '24px 0' }}>
-          <div style={{ position: 'relative', display: 'inline-block', marginBottom: '16px' }}>
-            <div style={{ width: '88px', height: '88px', borderRadius: '50%', background: 'var(--surface)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '44px', boxShadow: 'var(--shadow-sm)' }}>
-              {avatar}
-            </div>
+      <div className="st-body" style={{ paddingTop: 22 }}>
+        <h1 className="st-h1">¿Quién pide?</h1>
+        <p className="st-lead" style={{ marginTop: 6 }}>
+          Tu nombre aparece en la sala y en el pedido de la mesa.
+        </p>
+
+        {/* Nombre + vista previa de la ficha */}
+        <label
+          style={{
+            marginTop: 20,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 14,
+            background: 'var(--st-surface)',
+            border: `2px solid ${nombre.trim() ? 'var(--st-lime)' : 'var(--st-border)'}`,
+            borderRadius: 20,
+            padding: '14px 16px',
+            transition: 'border-color 0.2s ease',
+            cursor: 'text'
+          }}
+        >
+          <div
+            className="st-tile"
+            style={{ width: 52, height: 52, borderRadius: 16, background: elegido.hex, color: elegido.fg, fontSize: 26 }}
+            aria-hidden="true"
+          >
+            {letra}
           </div>
-          <h1 className="title-large" style={{ fontSize: '28px' }}>¿Quién eres?</h1>
-        </div>
 
-        <div className="card" style={{ padding: '16px' }}>
-          <input
-            className="wf-input"
-            placeholder="Escribe tu nombre..."
-            value={nombre}
-            onChange={e => setNombre(e.target.value.substring(0, 15))}
-            autoFocus
-          />
-        </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1, minWidth: 0 }}>
+            <span className="st-label">Tu nombre</span>
+            <input
+              value={nombre}
+              onChange={e => setNombre(e.target.value.substring(0, MAX_NOMBRE))}
+              onKeyDown={e => { if (e.key === 'Enter' && nombre.trim()) handleUnirse() }}
+              placeholder="Escríbelo aquí"
+              autoFocus
+              style={{
+                width: '100%',
+                border: 'none',
+                outline: 'none',
+                background: 'transparent',
+                color: 'var(--st-text-1)',
+                fontFamily: 'var(--st-display)',
+                fontWeight: 700,
+                fontSize: 24,
+                padding: 0
+              }}
+            />
+          </div>
 
-        <div className="section-label" style={{ marginTop: '24px', marginLeft: '4px' }}>Selecciona tu avatar</div>
-        <div className="avatar-grid">
-          {AVATARES.map(a => (
-            <div 
-              key={a}
-              className={`avatar-item ${avatar === a ? 'selected' : ''}`}
-              onClick={() => setAvatar(a)}
+          <span className="st-label" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            {nombre.length}/{MAX_NOMBRE}
+          </span>
+        </label>
+
+        <div className="st-label" style={{ marginTop: 24 }}>Elige tu color</div>
+
+        <div className="st-colors" style={{ marginTop: 12 }} role="radiogroup" aria-label="Color del comensal">
+          {COLORES_COMENSAL.map(c => (
+            <button
+              key={c.hex}
+              type="button"
+              role="radio"
+              aria-checked={color === c.hex}
+              aria-label={`Color ${c.hex}`}
+              className={`st-color ${color === c.hex ? 'st-color--on' : ''}`}
+              style={{ background: c.hex, color: c.fg }}
+              onClick={() => setColor(c.hex)}
             >
-              {a}
-            </div>
+              {letra}
+            </button>
           ))}
         </div>
-      </div>
 
-      <div className="native-bottom-bar">
-        <button 
-          className="wf-btn-solid" 
-          onClick={handleUnirse}
-          disabled={!nombre.trim() || cargando}
-        >
-          {cargando ? 'Conectando...' : 'Entrar a la mesa'}
-        </button>
+        <div className="st-footer">
+          <button
+            className="st-btn st-btn--primary"
+            onClick={handleUnirse}
+            disabled={!nombre.trim() || cargando}
+          >
+            {cargando ? 'Entrando…' : 'Entrar a la sala'}
+          </button>
+        </div>
       </div>
-    </>
+    </div>
   )
 }

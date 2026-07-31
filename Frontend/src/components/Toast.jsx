@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react'
+import { Bell, Check, X, AlertTriangle } from 'lucide-react'
 
 const ToastContext = createContext(null)
 
@@ -6,18 +7,25 @@ export function useToast() {
   return useContext(ToastContext)
 }
 
-function ToastItem({ toast, onRemove }) {
-  // Manejo visual basado en el type
-  let icon = '🔔'
-  let className = 'toast-info'
+/* Un solo lenguaje de iconos en toda la app: nada de emojis. */
+const ESTILOS = {
+  info:    { Icono: Bell,           color: 'var(--st-cyan)'  },
+  success: { Icono: Check,          color: 'var(--st-lime)'  },
+  error:   { Icono: X,              color: '#FF6B76'         },
+  warning: { Icono: AlertTriangle,  color: 'var(--st-amber)' }
+}
 
-  if (toast.type === 'success') { icon = '✓'; className = 'toast-success' }
-  if (toast.type === 'error')   { icon = '✕'; className = 'toast-error' }
-  if (toast.type === 'warning') { icon = '⚠️'; className = 'toast-warning' }
+function ToastItem({ toast, onRemove }) {
+  const { Icono, color } = ESTILOS[toast.type] || ESTILOS.info
 
   return (
-    <div className={`toast ${className}`} onClick={() => onRemove(toast.id)}>
-      <span style={{ fontSize: '15px' }}>{icon}</span>
+    <div
+      className={`toast toast-${toast.type}`}
+      onClick={() => onRemove(toast.id)}
+      role="status"
+      style={{ pointerEvents: 'auto' }}
+    >
+      <Icono size={16} strokeWidth={3} color={color} style={{ flexShrink: 0 }} />
       <span style={{ flex: 1 }}>{toast.message}</span>
     </div>
   )

@@ -1,34 +1,37 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Search, ShoppingBag, Bell } from 'lucide-react'
+import { Bell, Utensils, Scroll, Snowflake, HandPlatter, Sparkles, X, Trash2 } from 'lucide-react'
 import { getPlatos, getCategorias, llamarMesero, getMesa } from '../services/api'
 import { useToast } from '../components/Toast'
+import TopBar from '../components/TopBar'
+
+const MODOS_PAGO_TEXTO = {
+  individual: 'Cada uno lo suyo',
+  partes_iguales: 'Partes iguales',
+  lider: 'Tú invitas'
+}
+
+const AYUDAS = [
+  { id: 'llamar_mesero',     label: 'Llamado general',   desc: 'Necesitamos consultar algo',   icono: HandPlatter },
+  { id: 'traer_cubiertos',   label: 'Traer cubiertos',   desc: 'Tenedor, cuchillo o cuchara',  icono: Utensils },
+  { id: 'traer_servilletas', label: 'Traer servilletas', desc: 'Servilletas para la mesa',     icono: Scroll },
+  { id: 'traer_hielo',       label: 'Traer hielo',       desc: 'Un vaso o cubeta con hielo',   icono: Snowflake },
+  { id: 'retirar_platos',    label: 'Retirar platos',    desc: 'Despejar espacio en la mesa',  icono: Sparkles }
+]
 
 export default function Menu() {
   const { idMesa } = useParams()
   const navigate = useNavigate()
   const { toast } = useToast()
 
+  const user = JSON.parse(localStorage.getItem('swifttable_user') || '{}')
+
   const [carrito, setCarrito] = useState([])
-  const [showBellMenu, setShowBellMenu] = useState(false)
-
-  const handleLlamarMozo = () => {
-    setShowBellMenu(true)
-  }
-
-  const enviarAlertaMozo = async (tipoAlert, labelAlert) => {
-    setShowBellMenu(false)
-    try {
-      await llamarMesero(idMesa, tipoAlert)
-      toast(`Solicitud enviada: ${labelAlert}. El mozo acudirá pronto.`, 'success')
-    } catch (e) {
-      toast('Error al solicitar asistencia', 'error')
-    }
-  }
   const [platos, setPlatos] = useState([])
   const [categorias, setCategorias] = useState([])
-  const [categoria, setCategoria] = useState(1) // Por defecto id 1
+  const [categoria, setCategoria] = useState(null)
   const [cargando, setCargando] = useState(true)
+  const [hojaAyuda, setHojaAyuda] = useState(false)
 
   useEffect(() => {
     const fetchDatos = async () => {
@@ -36,11 +39,9 @@ export default function Menu() {
         let restId = null
         try {
           const mesaInfo = await getMesa(idMesa)
-          if (mesaInfo && mesaInfo.id_restaurante) {
-            restId = mesaInfo.id_restaurante
-          }
+          if (mesaInfo && mesaInfo.id_restaurante) restId = mesaInfo.id_restaurante
         } catch (err) {
-          console.error("Error al obtener la mesa:", err)
+          console.error('Error al obtener la mesa:', err)
         }
 
         const [platosData, catsData] = await Promise.all([
@@ -49,11 +50,9 @@ export default function Menu() {
         ])
         setPlatos(platosData || [])
         setCategorias(catsData || [])
-        if (catsData && catsData.length > 0) {
-          setCategoria(catsData[0].id_categoria)
-        }
+        if (catsData && catsData.length > 0) setCategoria(catsData[0].id_categoria)
       } catch (e) {
-        toast('Error al cargar el menú', 'error')
+        toast('No pudimos cargar el menú', 'error')
       } finally {
         setCargando(false)
       }
@@ -66,7 +65,15 @@ export default function Menu() {
     if (prevCart) setCarrito(JSON.parse(prevCart))
   }, [])
 
-  const platosFiltrados = platos.filter(p => p.id_categoria === categoria)
+  const enviarAlertaMozo = async (tipo, etiqueta) => {
+    setHojaAyuda(false)
+    try {
+      await llamarMesero(idMesa, tipo)
+      toast(`${etiqueta}: el mozo va en camino`, 'success')
+    } catch (e) {
+      toast('No pudimos avisar al mozo', 'error')
+    }
+  }
 
   const getCantidad = (id) => {
     const item = carrito.find(p => p.id_producto === id)
@@ -96,155 +103,156 @@ export default function Menu() {
     navigate(`/mesa/${idMesa}/pedido-grupo`)
   }
 
-  const limpiarCarrito = () => {
+  const vaciarCarrito = () => {
     setCarrito([])
     localStorage.removeItem('swifttable_carrito')
+    toast('Vaciaste tu pedido', 'info')
   }
 
+  const platosFiltrados = platos.filter(p => p.id_categoria === categoria)
   const totalItems = carrito.reduce((sum, p) => sum + p.cantidad, 0)
   const totalMonto = carrito.reduce((sum, p) => sum + (Number(p.precio || 0) * p.cantidad), 0)
 
   return (
-    <>
-      <div className="native-app-bar" style={{ paddingBottom: '8px' }}>
-        <div className="left-action">
-          <button className="wf-btn-ghost" onClick={() => navigate(-1)} style={{ padding: 0 }}>
-            <span style={{ fontSize: '28px', color: 'var(--accent)' }}>‹</span>
-          </button>
-        </div>
-        <div className="title" style={{ fontSize: '20px', fontWeight: '800', letterSpacing: '-0.02em' }}>{localStorage.getItem('swifttable_nombre_restaurante') || 'Menú'}</div>
-        <div className="right-action" style={{ gap: '8px', width: 'auto', minWidth: '40px' }}>
-          <button 
-            className="wf-btn-ghost" 
-            style={{ padding: 0, color: 'var(--accent)', display: 'flex', alignItems: 'center' }} 
-            onClick={handleLlamarMozo}
-            title="Llamar al mozo"
-          >
-            <Bell size={22} />
-          </button>
-          {totalItems > 0 && (
-            <button className="wf-btn-ghost" style={{ color: 'var(--red)', fontSize: '14px', padding: '0 4px' }} onClick={limpiarCarrito}>
-              Vaciar
-            </button>
-          )}
-        </div>
-      </div>
+    <div className="st-screen st-screen--light">
+      <div className="st-darkhead">
+        <TopBar
+          meta={`Mesa ${idMesa}${user.modoPago ? ` · ${MODOS_PAGO_TEXTO[user.modoPago] || ''}` : ''}`}
+          derecha={
+            <>
+              {totalItems > 0 && (
+                <button className="st-back" onClick={vaciarCarrito} aria-label="Vaciar mi pedido">
+                  <Trash2 size={17} strokeWidth={2.2} color="var(--st-text-2)" />
+                </button>
+              )}
+              <button
+                className="st-back"
+                style={{ background: 'var(--st-amber)' }}
+                onClick={() => setHojaAyuda(true)}
+                aria-label="Llamar al mozo"
+              >
+                <Bell size={18} strokeWidth={2.4} color="var(--st-ink)" />
+              </button>
+            </>
+          }
+        />
 
-      {/* Tabs Ancladas al header */}
-      <div style={{ position: 'sticky', top: 'calc(58px + var(--safe-top))', zIndex: 40, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', borderBottom: '0.5px solid var(--border)' }}>
-        <div className="category-tabs" style={{ margin: 0, padding: '12px 16px' }}>
+        <div className="st-cats" role="tablist" aria-label="Categorías del menú">
           {categorias.map(cat => (
-            <div
+            <button
               key={cat.id_categoria}
-              className={`category-tab ${categoria === cat.id_categoria ? 'active' : ''}`}
+              role="tab"
+              aria-selected={categoria === cat.id_categoria}
+              className={`st-cat ${categoria === cat.id_categoria ? 'st-cat--on' : ''}`}
               onClick={() => setCategoria(cat.id_categoria)}
             >
               {cat.nombre}
-            </div>
+            </button>
           ))}
         </div>
       </div>
 
-      <div className="content-wrapper" style={{ padding: '0 16px calc(120px + var(--safe-bottom))' }}>
-        
+      <div className="st-body" style={{ padding: '16px 18px 0', gap: 11 }}>
         {cargando ? (
-          <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-3)' }}>Cargando...</div>
+          <div className="st-empty">Cargando el menú…</div>
+        ) : platosFiltrados.length === 0 ? (
+          <div className="st-empty">No hay platos en esta categoría.</div>
         ) : (
-          <div style={{ marginTop: '16px' }}>
-            {platosFiltrados.map((plato, i) => {
-              const cant = getCantidad(plato.id_producto)
-              const isInCart = cant > 0
-              return (
-                <div key={plato.id_producto} className={`menu-item-card ${isInCart ? 'in-cart' : ''} animate-pop stagger-${(i % 5) + 1}`}>
-                  <div className="menu-item-thumb">
-                    {plato.imagen_url ? (
-                      <img src={plato.imagen_url} alt={plato.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
-                    ) : (
-                      <span style={{ fontSize: '24px' }}>🍗</span>
-                    )}
-                  </div>
-                  
-                  <div className="menu-item-info">
-                    <div className="menu-item-name">{plato.nombre}</div>
-                    <div className="menu-item-desc">{plato.descripcion}</div>
-                    <div className="menu-item-price">S/ {Number(plato.precio || 0).toFixed(2)}</div>
-                  </div>
+          platosFiltrados.map(plato => {
+            const cant = getCantidad(plato.id_producto)
+            const agotado = plato.disponible === false
 
-                  <div className="qty-control">
-                    {cant > 0 ? (
-                      <>
-                        <button className="qty-btn" onClick={() => disminuir(plato)}>-</button>
-                        <div className="qty-num">{cant}</div>
-                        <button className="qty-btn plus" onClick={() => aumentar(plato)}>+</button>
-                      </>
-                    ) : (
-                      <button className="qty-btn plus" style={{ width: 'auto', padding: '0 12px', borderRadius: '16px', fontSize: '15px', fontWeight: '600' }} onClick={() => aumentar(plato)}>Agregar</button>
-                    )}
-                  </div>
+            return (
+              <div
+                key={plato.id_producto}
+                className={`st-dish ${cant > 0 ? 'st-dish--in' : ''} ${agotado ? 'st-dish--off' : ''}`}
+              >
+                <div className="st-dish__thumb">
+                  {plato.imagen_url
+                    ? <img src={plato.imagen_url} alt="" />
+                    : <span className="st-dish__ph">FOTO<br />PLATO</span>}
                 </div>
-              )
-            })}
-          </div>
+
+                <div className="st-dish__info">
+                  <div className="st-dish__name">{plato.nombre}</div>
+                  {plato.descripcion && <div className="st-dish__desc">{plato.descripcion}</div>}
+                  {agotado
+                    ? <div className="st-dish__desc">Agotado por hoy</div>
+                    : <div className="st-dish__price">S/ {Number(plato.precio || 0).toFixed(2)}</div>}
+                </div>
+
+                {!agotado && (
+                  cant > 0 ? (
+                    <div className="st-qty">
+                      <button
+                        className="st-qty__btn st-qty__btn--plus"
+                        onClick={() => aumentar(plato)}
+                        aria-label={`Agregar otro ${plato.nombre}`}
+                      >
+                        +
+                      </button>
+                      <span className="st-qty__n">{cant}</span>
+                      <button
+                        className="st-qty__btn st-qty__btn--minus"
+                        onClick={() => disminuir(plato)}
+                        aria-label={`Quitar un ${plato.nombre}`}
+                      >
+                        –
+                      </button>
+                    </div>
+                  ) : (
+                    <button className="st-add" onClick={() => aumentar(plato)}>Agregar</button>
+                  )
+                )}
+              </div>
+            )
+          })
         )}
       </div>
 
       {totalItems > 0 && (
-        <div className="native-bottom-bar" style={{ display: 'flex', gap: '16px', padding: '16px' }}>
-          <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: '12px', color: 'var(--text-2)', fontWeight: '500' }}>{totalItems} items</span>
-            <span style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-1)' }}>S/ {totalMonto.toFixed(2)}</span>
+        <div className="st-dock">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span className="st-label">{totalItems} {totalItems === 1 ? 'PLATO' : 'PLATOS'}</span>
+            <span className="st-num" style={{ fontSize: 24, color: '#fff' }}>S/ {totalMonto.toFixed(2)}</span>
           </div>
-          <button className="wf-btn-solid" style={{ flex: 1, padding: '16px' }} onClick={handleConfirmar}>
-            Revisar Pedido
+          <button className="st-btn st-btn--primary st-btn--sm" style={{ flex: 1 }} onClick={handleConfirmar}>
+            Ver pedido de la mesa
           </button>
         </div>
       )}
 
-      {showBellMenu && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(8px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 9999, padding: '24px'
-        }}>
-          <div className="card animate-pop" style={{ maxWidth: '400px', width: '100%', padding: '24px', margin: 0, boxShadow: 'var(--shadow-md)', border: '1px solid var(--border)' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '16px', color: 'var(--text-1)', textAlign: 'center' }}>
-              ¿En qué podemos ayudarte?
-            </h3>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
-              {[
-                { id: 'llamar_mesero', label: '🙋‍♂️ Llamado General', desc: 'Si necesitas consultar algo' },
-                { id: 'traer_cubiertos', label: '🍴 Traer Cubiertos', desc: 'Tenedor, cuchillo o cuchara extra' },
-                { id: 'traer_servilletas', label: '🧻 Traer Servilletas', desc: 'Servilletas de papel para la mesa' },
-                { id: 'traer_hielo', label: '🧊 Traer Hielo', desc: 'Un vaso o cubeta con hielo' },
-                { id: 'retirar_platos', label: '🧼 Retirar Platos sucios', desc: 'Despejar espacio de la mesa' }
-              ].map(opt => (
-                <div 
-                  key={opt.id}
-                  className="pago-option"
-                  style={{ margin: 0, padding: '12px 16px', cursor: 'pointer' }}
-                  onClick={() => enviarAlertaMozo(opt.id, opt.label.substring(3))}
-                >
-                  <div>
-                    <div style={{ fontSize: '15px', fontWeight: '600' }}>{opt.label}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-2)' }}>{opt.desc}</div>
-                  </div>
-                  <div style={{ fontSize: '18px', color: 'var(--accent)' }}>›</div>
-                </div>
-              ))}
-            </div>
+      {hojaAyuda && (
+        <div className="st-sheet-backdrop" onClick={() => setHojaAyuda(false)} role="dialog" aria-modal="true">
+          <div className="st-sheet" onClick={e => e.stopPropagation()}>
+            <div className="st-sheet__grip" />
+            <h2 className="st-h2" style={{ fontSize: 24 }}>¿Qué necesitan?</h2>
 
-            <button 
-              className="wf-btn-outline" 
-              style={{ width: '100%', padding: '12px', fontSize: '14px', borderRadius: '12px' }}
-              onClick={() => setShowBellMenu(false)}
-            >
+            {AYUDAS.map(op => {
+              const Icono = op.icono
+              return (
+                <button key={op.id} className="st-sheet__item" onClick={() => enviarAlertaMozo(op.id, op.label)}>
+                  <span
+                    className="st-tile"
+                    style={{ width: 40, height: 40, borderRadius: 13, background: 'var(--st-bg)', color: 'var(--st-amber)' }}
+                  >
+                    <Icono size={19} strokeWidth={2.2} />
+                  </span>
+                  <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'var(--st-display)', fontWeight: 800, fontSize: 16 }}>{op.label}</span>
+                    <span style={{ fontSize: 12.5, color: 'var(--st-text-3)', fontWeight: 500 }}>{op.desc}</span>
+                  </span>
+                </button>
+              )
+            })}
+
+            <button className="st-btn st-btn--outline" onClick={() => setHojaAyuda(false)}>
+              <X size={16} strokeWidth={2.6} style={{ verticalAlign: '-3px', marginRight: 6 }} />
               Cancelar
             </button>
           </div>
         </div>
       )}
-    </>
+    </div>
   )
 }

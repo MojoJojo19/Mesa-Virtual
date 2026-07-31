@@ -1,25 +1,57 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Bell, FileText, CheckCircle2, Clock, ChefHat, Utensils } from 'lucide-react'
+import { Bell, FileText, ChefHat, CheckCircle2, ChevronRight } from 'lucide-react'
 import { useToast } from '../components/Toast'
-import { llamarMesero, getPedidosDeMesa, getMesa } from '../services/api'
+import { llamarMesero, getPedidosDeMesa, getMesa, getComensalesDeMesa } from '../services/api'
+import TopBar from '../components/TopBar'
+import { nombreRestaurante } from '../theme/sala'
+
+/* Los tres estados que ve el comensal, y cómo se pinta cada uno. */
+const FASES = ['EN COCINA', 'LISTO', 'ENTREGADO']
+
+const VISTA = {
+  preparacion: {
+    fase: 0,
+    color: 'var(--st-amber)',
+    textoOscuro: '#43330a',
+    icono: ChefHat,
+    titulo: 'La cocina\nestá en eso',
+    detalle: 'Sus platos entraron juntos al fuego. Te avisamos en cuanto salgan.'
+  },
+  listo: {
+    fase: 1,
+    color: 'var(--st-cyan)',
+    textoOscuro: '#123c40',
+    icono: Bell,
+    titulo: '¡Su pedido\nestá listo!',
+    detalle: 'Ya salió de la cocina. El mozo lo está llevando a su mesa.'
+  },
+  servido: {
+    fase: 2,
+    color: 'var(--st-lime)',
+    textoOscuro: '#2f4410',
+    icono: CheckCircle2,
+    titulo: '¡Buen\nprovecho!',
+    detalle: 'Todos los platos están servidos. Que disfruten la comida.'
+  }
+}
 
 export default function PedidoEnviado() {
   const { idMesa } = useParams()
   const navigate = useNavigate()
   const { toast } = useToast()
-  
-  const [pedidos, setPedidos] = useState([])
-  const [cargando, setCargando] = useState(true)
+
+  const [estado, setEstado] = useState('preparacion')
   const [minutos, setMinutos] = useState(15)
-  const [estadoAnterior, setEstadoAnterior] = useState('esperando')
+  // Evita repetir el aviso sonoro en cada vuelta del sondeo.
+  const yaAvisado = useRef(false)
 
   const handleLlamarMozo = async () => {
     try {
       await llamarMesero(idMesa)
-      toast('Llamando al mozo. En breve se acercará a su mesa.', 'success')
+      toast('Llamando al mozo. En breve se acerca a su mesa.', 'success')
     } catch (e) {
-      toast('Error al solicitar asistencia', 'error')
+      toast('No pudimos avisar al mozo', 'error')
     }
   }
 
@@ -28,7 +60,7 @@ export default function PedidoEnviado() {
       const AudioContext = window.AudioContext || window.webkitAudioContext
       if (!AudioContext) return
       const ctx = new AudioContext()
-      
+
       const playNote = (time, freq, duration) => {
         const osc = ctx.createOscillator()
         const gain = ctx.createGain()
@@ -43,237 +75,188 @@ export default function PedidoEnviado() {
       }
 
       const now = ctx.currentTime
-      playNote(now, 523.25, 0.25) // Do5
-      playNote(now + 0.15, 659.25, 0.25) // Mi5
-      playNote(now + 0.3, 783.99, 0.4) // Sol5
+      playNote(now, 523.25, 0.25)
+      playNote(now + 0.15, 659.25, 0.25)
+      playNote(now + 0.3, 783.99, 0.4)
     } catch (e) {
-      console.warn("Sonido bloqueado por restricciones del navegador:", e)
-    }
-  }
-
-  // Polling para verificar estado del pedido
-  const verificarEstado = async () => {
-    try {
-      // 1. Obtener pedidos
-      const peds = await getPedidosDeMesa(idMesa)
-      setPedidos(peds || [])
-
-      // Calcular el nuevo estado de tracking
-      let nuevoEst = 'esperando'
-      if (peds && peds.length > 0) {
-        const todosServidos = peds.every(p => p.estado === 'servido')
-        const algunoListo = peds.some(p => p.estado === 'listo_para_servir')
-        const algunoEnPreparacion = peds.some(p => p.estado === 'pendiente' || p.estado === 'en_preparacion')
-        
-        if (todosServidos) {
-          nuevoEst = 'servido'
-        } else if (algunoListo) {
-          nuevoEst = 'listo'
-        } else if (algunoEnPreparacion) {
-          nuevoEst = 'preparacion'
-        }
-      }
-      
-      // Reproducir sonido si pasa a listo
-      if (nuevoEst === 'listo' && estadoAnterior !== 'listo') {
-        reproducirSonidoListo()
-        toast('¡Tu comida está lista! El mesero la traerá en breve.', 'success')
-      }
-      
-      if (nuevoEst !== 'esperando') {
-        setEstadoAnterior(nuevoEst)
-      }
-
-      // 2. Verificar si la mesa fue liberada (sesión finalizada)
-      const userData = localStorage.getItem('swifttable_user')
-      if (!userData) {
-        navigate(`/mesa/${idMesa}`)
-        return
-      }
-
-      const mesaInfo = await getMesa(idMesa)
-      if (mesaInfo && (mesaInfo.estado === 'libre' || !mesaInfo.comensales || mesaInfo.comensales.length === 0)) {
-        toast('Mesa liberada por administración. Sesión finalizada.', 'info')
-        localStorage.removeItem('swifttable_carrito')
-        localStorage.removeItem('swifttable_user')
-        navigate(`/mesa/${idMesa}`)
-      }
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setCargando(false)
+      console.warn('Sonido bloqueado por restricciones del navegador:', e)
     }
   }
 
   useEffect(() => {
-    toast('¡Pedido enviado a cocina exitosamente!', 'success')
-    verificarEstado()
-    
-    // Polling cada 5 segundos
-    const interval = setInterval(() => {
-      verificarEstado()
-    }, 5000)
+    let vivo = true
 
-    const timer = setInterval(() => {
-      setMinutos(m => (m > 0 ? m - 1 : 0))
-    }, 60000)
+    const verificarEstado = async () => {
+      try {
+        const peds = await getPedidosDeMesa(idMesa)
+        if (!vivo) return
 
-    return () => {
-      clearInterval(interval)
-      clearInterval(timer)
+        if (peds && peds.length > 0) {
+          const todosServidos = peds.every(p => p.estado === 'servido')
+          const algunoListo = peds.some(p => p.estado === 'listo_para_servir')
+
+          let nuevo = 'preparacion'
+          if (todosServidos) nuevo = 'servido'
+          else if (algunoListo) nuevo = 'listo'
+
+          if (nuevo === 'listo' && !yaAvisado.current) {
+            yaAvisado.current = true
+            reproducirSonidoListo()
+            toast('¡Su comida está lista! El mozo la trae en breve.', 'success')
+          }
+          setEstado(nuevo)
+        }
+
+        // Si ya no hay sesión en este dispositivo, no hay nada que seguir.
+        if (!localStorage.getItem('swifttable_user')) {
+          navigate(`/mesa/${idMesa}`)
+          return
+        }
+
+        /*
+         * La sesión terminó solo si se cumplen las dos cosas: el panel dejó
+         * la mesa en "libre" y además borró a los comensales (eso hace el
+         * endpoint /liberar). Pedir ambas evita echar al comensal por una
+         * lectura suelta del estado.
+         */
+        const [mesaInfo, enLaMesa] = await Promise.all([
+          getMesa(idMesa),
+          getComensalesDeMesa(idMesa)
+        ])
+        if (!vivo) return
+
+        const mesaLibre = mesaInfo && mesaInfo.estado === 'libre'
+        const usuario = JSON.parse(localStorage.getItem('swifttable_user') || '{}')
+        const sigoEnLaMesa = enLaMesa.some(c => c.id_comensal === usuario.id)
+
+        if (mesaLibre && !sigoEnLaMesa) {
+          toast('Mesa cerrada por el restaurante. ¡Hasta la próxima!', 'info')
+          localStorage.removeItem('swifttable_carrito')
+          localStorage.removeItem('swifttable_user')
+          navigate(`/mesa/${idMesa}`)
+        }
+      } catch (e) {
+        console.error(e)
+      }
     }
-  }, [idMesa])
 
-  const restName = localStorage.getItem('swifttable_nombre_restaurante') || 'SwiftTable'
+    toast('¡Pedido enviado a cocina!', 'success')
+    verificarEstado()
+
+    const sondeo = setInterval(verificarEstado, 5000)
+    const reloj = setInterval(() => setMinutos(m => (m > 0 ? m - 1 : 0)), 60000)
+
+    return () => { vivo = false; clearInterval(sondeo); clearInterval(reloj) }
+  }, [idMesa, navigate, toast])
+
+  const vista = VISTA[estado]
+  const Icono = vista.icono
 
   return (
-    <>
-      <div className="native-app-bar">
-        <div className="left-action"></div>
-        <div className="title">{restName}</div>
-        <div className="right-action"></div>
-      </div>
+    <div className="st-screen">
+      <div
+        className="st-glow"
+        style={{ top: 120, left: '50%', transform: 'translateX(-50%)', width: 300, height: 300, background: vista.color, opacity: 0.28 }}
+      />
 
-      <div className="content-wrapper flex-col" style={{ padding: '16px' }}>
-        
-        {/* Step Progress Tracker */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '8px 8px 24px', padding: '0 8px', position: 'relative' }}>
-          {/* Línea de progreso de fondo */}
-          <div style={{
-            position: 'absolute', top: '16px', left: '24px', right: '24px', height: '3px',
-            background: 'var(--border)', zIndex: 1
-          }}></div>
-          {/* Línea de progreso activa */}
-          <div style={{
-            position: 'absolute', top: '16px', left: '24px', 
-            width: estadoAnterior === 'servido' ? 'calc(100% - 48px)' : (estadoAnterior === 'listo' ? '50%' : '0%'),
-            height: '3px', background: estadoAnterior === 'listo' ? 'var(--blue)' : 'var(--green)', zIndex: 2,
-            transition: 'all 0.5s ease'
-          }}></div>
+      <TopBar meta={`Mesa ${idMesa} · ${FASES[vista.fase]}`} />
 
-          {[
-            { id: 'preparacion', label: 'Cocina', icon: ChefHat },
-            { id: 'listo', label: 'Listo', icon: Bell },
-            { id: 'servido', label: 'Entregado', icon: Utensils }
-          ].map((st, idx) => {
-            const isCompleted = (estadoAnterior === 'servido') || 
-                                (estadoAnterior === 'listo' && idx <= 1) || 
-                                (estadoAnterior === 'preparacion' && idx === 0) ||
-                                (estadoAnterior === 'esperando' && idx === 0);
-            
-            const activeColor = st.id === 'listo' ? 'var(--blue)' : (st.id === 'servido' ? 'var(--green)' : 'var(--accent)');
-            const IconComponent = st.icon;
-            
-            return (
-              <div key={st.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 3, width: '60px' }}>
-                <div style={{
-                  width: '32px', height: '32px', borderRadius: '50%',
-                  background: isCompleted ? activeColor : 'var(--surface)',
-                  color: isCompleted ? 'white' : 'var(--text-3)',
-                  border: `2.5px solid ${isCompleted ? activeColor : 'var(--border)'}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'all 0.3s ease',
-                  boxShadow: isCompleted ? '0 4px 10px rgba(0,0,0,0.1)' : 'none'
-                }}>
-                  <IconComponent size={15} style={{ color: isCompleted ? 'white' : 'inherit' }} />
-                </div>
-                <span style={{
-                  fontSize: '11px', fontWeight: '700', marginTop: '6px',
-                  color: isCompleted ? 'var(--text-1)' : 'var(--text-3)'
-                }}>{st.label}</span>
+      <div className="st-body" style={{ paddingTop: 22 }}>
+        <div className="st-steps">
+          {FASES.map((etiqueta, i) => (
+            <div key={etiqueta} className={`st-step ${i < vista.fase ? 'st-step--done' : i === vista.fase ? 'st-step--active' : ''}`}>
+              <div
+                className="st-step__bar"
+                style={i <= vista.fase ? { background: vista.color, height: 8 } : { height: 8 }}
+              />
+              <div className="st-step__label" style={i === vista.fase ? { color: vista.color } : undefined}>
+                {etiqueta}
               </div>
-            )
-          })}
+            </div>
+          ))}
         </div>
 
-        {/* Dynamic Status Card */}
-        {estadoAnterior === 'servido' ? (
-          <div className="card text-center animate-pop" style={{ padding: '32px 16px', margin: '0 0 24px', border: '1.5px solid var(--green-border)', background: 'var(--green-bg)' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-              <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'var(--surface)', color: 'var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-sm)' }}>
-                <CheckCircle2 size={40} strokeWidth={2.5} />
-              </div>
-            </div>
-            <h1 className="title-large" style={{ fontSize: '24px', color: '#166534', marginBottom: '8px' }}>¡Buen provecho!</h1>
-            <p style={{ fontSize: '14px', color: '#15803d', lineHeight: 1.4 }}>
-              Todos los platos han sido servidos en tu mesa. ¡Que disfrutes tu comida!
-            </p>
-          </div>
-        ) : estadoAnterior === 'listo' ? (
-          <div className="card text-center animate-pop" style={{ padding: '32px 16px', margin: '0 0 24px', border: '2px solid var(--blue)', background: 'var(--blue-bg)' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-              <div style={{ 
-                width: '72px', height: '72px', borderRadius: '50%', background: 'var(--blue)', color: 'white', 
-                display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
-              }}>
-                <Bell size={40} strokeWidth={2} />
-              </div>
-            </div>
-            <h1 className="title-large" style={{ fontSize: '24px', color: 'var(--blue)', marginBottom: '8px' }}>¡Pedido listo!</h1>
-            <p style={{ fontSize: '14px', color: 'var(--text-1)', lineHeight: 1.4, fontWeight: '500' }}>
-              Tus platos ya están listos en la barra. El mesero se encuentra llevándolos a tu mesa en este momento.
-            </p>
-          </div>
-        ) : (
-          <div className="card text-center animate-fade-in" style={{ padding: '32px 16px', margin: '0 0 24px', background: 'var(--accent-bg)', border: '1.5px solid var(--accent-border)' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-              <div style={{ 
-                width: '72px', height: '72px', borderRadius: '50%', background: 'var(--surface)', color: 'var(--accent)', 
-                display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-sm)'
-              }}>
-                <ChefHat size={36} />
-              </div>
-            </div>
-            <h1 className="title-large" style={{ fontSize: '24px', color: 'var(--accent-2)', marginBottom: '8px' }}>En preparación...</h1>
-            <p style={{ fontSize: '14px', color: 'var(--text-1)', lineHeight: 1.4 }}>
-              La cocina está preparando tus platos con ingredientes frescos.
-            </p>
-            
-            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '24px' }}>
-              <div style={{ background: 'var(--surface)', padding: '10px 20px', borderRadius: 'var(--r-full)', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: 'var(--shadow-sm)' }}>
-                <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-2)', textTransform: 'uppercase' }}>Tiempo estimado</span>
-                <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--accent)' }}>{minutos} min</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="section-label" style={{ marginTop: '16px' }}>Opciones de la mesa</div>
-        
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div className="pago-option" onClick={handleLlamarMozo} style={{ cursor: 'pointer' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--accent-bg)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Bell size={20} />
-              </div>
-              <div>
-                <div style={{ fontSize: '16px', fontWeight: '600' }}>Llamar al Mozo</div>
-                <div style={{ fontSize: '13px', color: 'var(--text-2)' }}>Si necesitas ayuda o algo extra</div>
-              </div>
-            </div>
+        <div
+          className="st-pop"
+          style={{
+            marginTop: 26,
+            background: vista.color,
+            borderRadius: 26,
+            padding: '26px 20px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 14,
+            boxShadow: '0 7px 0 rgba(21,10,36,0.3)'
+          }}
+        >
+          <div
+            className="st-tile st-float"
+            style={{ width: 88, height: 88, borderRadius: 28, background: 'var(--st-ink)', color: vista.color }}
+          >
+            <Icono size={44} strokeWidth={2} />
           </div>
 
-          <div className="pago-option" onClick={() => navigate(`/mesa/${idMesa}/resumen`)} style={{ cursor: 'pointer' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--purple-bg)', color: 'var(--purple)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <FileText size={20} />
-              </div>
-              <div>
-                <div style={{ fontSize: '16px', fontWeight: '600' }}>Ver Resumen y Pagar</div>
-                <div style={{ fontSize: '13px', color: 'var(--text-2)' }}>Revisa la cuenta o pide la boleta</div>
-              </div>
-            </div>
-          </div>
-        </div>
+          <h1 className="st-h1" style={{ fontSize: 34, textAlign: 'center', color: 'var(--st-ink)', whiteSpace: 'pre-line' }}>
+            {vista.titulo}
+          </h1>
 
-        <div className="mt-auto text-center" style={{ padding: '32px 0 16px' }}>
-          <p style={{ fontSize: '14px', color: 'var(--text-3)', fontWeight: '500' }}>
-            ¡Gracias por preferir La Fogata!
+          <p style={{ fontSize: 14.5, fontWeight: 600, color: vista.textoOscuro, textAlign: 'center', maxWidth: 250, textWrap: 'pretty' }}>
+            {vista.detalle}
           </p>
+
+          {estado === 'preparacion' && (
+            <div
+              style={{
+                background: 'var(--st-ink)',
+                borderRadius: 999,
+                padding: '9px 18px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10
+              }}
+            >
+              <span className="st-label">Faltan</span>
+              <span className="st-num" style={{ fontSize: 20, color: vista.color }}>{minutos} min</span>
+            </div>
+          )}
         </div>
 
+        <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <button className="st-sheet__item" onClick={handleLlamarMozo}>
+            <span
+              className="st-tile"
+              style={{ width: 42, height: 42, borderRadius: 14, background: 'var(--st-accent)', color: '#fff' }}
+            >
+              <Bell size={20} strokeWidth={2.4} />
+            </span>
+            <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <span style={{ fontFamily: 'var(--st-display)', fontWeight: 800, fontSize: 18 }}>Llamar al mozo</span>
+              <span style={{ fontSize: 13, color: 'var(--st-text-3)', fontWeight: 500 }}>Cubiertos, hielo, algo más</span>
+            </span>
+            <ChevronRight size={20} color="var(--st-border-2)" />
+          </button>
+
+          <button className="st-sheet__item" onClick={() => navigate(`/mesa/${idMesa}/resumen`)}>
+            <span
+              className="st-tile"
+              style={{ width: 42, height: 42, borderRadius: 14, background: 'var(--st-violet)', color: '#fff' }}
+            >
+              <FileText size={20} strokeWidth={2.2} />
+            </span>
+            <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <span style={{ fontFamily: 'var(--st-display)', fontWeight: 800, fontSize: 18 }}>Ver la cuenta</span>
+              <span style={{ fontSize: 13, color: 'var(--st-text-3)', fontWeight: 500 }}>Revisa el total y paga</span>
+            </span>
+            <ChevronRight size={20} color="var(--st-border-2)" />
+          </button>
+        </div>
+
+        {/* El nombre sale del local que se escaneó, no de uno fijo. */}
+        <p style={{ marginTop: 'auto', paddingTop: 24, textAlign: 'center', fontSize: 13.5, color: 'var(--st-text-3)', fontWeight: 600 }}>
+          ¡Gracias por preferir {nombreRestaurante()}!
+        </p>
       </div>
-    </>
+    </div>
   )
 }
-

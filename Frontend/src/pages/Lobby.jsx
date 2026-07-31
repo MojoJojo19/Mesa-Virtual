@@ -1,101 +1,180 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Users, Copy, Share } from 'lucide-react'
+import { Share2, Info } from 'lucide-react'
+import { getComensalesDeMesa } from '../services/api'
 import { useToast } from '../components/Toast'
+import TopBar from '../components/TopBar'
+import StepBar from '../components/StepBar'
+import { colorComensal, inicial } from '../theme/sala'
 
 export default function Lobby() {
   const { idMesa } = useParams()
   const navigate = useNavigate()
   const { toast } = useToast()
-  
-  const user = JSON.parse(localStorage.getItem('swifttable_user') || '{"nombre":"Carlos","avatar":"🐱","isLider":true}')
+
+  const user = JSON.parse(localStorage.getItem('swifttable_user') || '{}')
   const isLider = user.isLider || false
 
-  const [conectados, setConectados] = useState([
-    { nombre: user.nombre || 'Carlos', avatar: user.avatar || '🐱', isLider },
-    { nombre: 'Ana', avatar: '🐶', isLider: false }
-  ])
+  const [conectados, setConectados] = useState([])
+  const [cargando, setCargando] = useState(true)
+  // Para avisar solo de los que van llegando, no de los que ya estaban.
+  const conocidos = useRef(null)
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setConectados(prev => [...prev, { nombre: 'Luis', avatar: '🦊', isLider: false }])
-      toast('Luis se unió a la mesa', 'info')
-    }, 4000)
-    return () => clearTimeout(timer)
-  }, [toast])
+    let vivo = true
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(`swifttable.com/mesa/${idMesa}`)
-    toast('Enlace copiado al portapapeles', 'success')
+    const sincronizar = async () => {
+      const lista = await getComensalesDeMesa(idMesa)
+      if (!vivo) return
+
+      const activos = lista.filter(c => c.estado_sesion !== 'inactiva')
+
+      if (conocidos.current === null) {
+        conocidos.current = new Set(activos.map(c => c.id_comensal))
+      } else {
+        activos.forEach(c => {
+          if (!conocidos.current.has(c.id_comensal)) {
+            conocidos.current.add(c.id_comensal)
+            if (c.id_comensal !== user.id) toast(`${c.nombre} se unió a la mesa`, 'info')
+          }
+        })
+      }
+
+      setConectados(activos)
+      setCargando(false)
+    }
+
+    sincronizar()
+    const intervalo = setInterval(sincronizar, 4000)
+    return () => { vivo = false; clearInterval(intervalo) }
+  }, [idMesa, toast, user.id])
+
+  const handleCompartir = async () => {
+    const url = `${window.location.origin}/mesa/${idMesa}`
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'Únete a la mesa', url })
+        return
+      }
+      await navigator.clipboard.writeText(url)
+      toast('Enlace copiado al portapapeles', 'success')
+    } catch {
+      // El usuario canceló el diálogo de compartir: no hay nada que informar.
+    }
   }
 
-  const restName = localStorage.getItem('swifttable_nombre_restaurante') || 'SwiftTable'
-
   return (
-    <>
-      <div className="native-app-bar">
-        <div className="left-action"></div>
-        <div className="title">{restName}</div>
-        <div className="right-action">
-          <button className="wf-btn-ghost" onClick={handleCopyLink} style={{ padding: 0 }}>
-            <Share size={24} color="var(--accent)" />
+    <div className="st-screen">
+      <div
+        className="st-glow"
+        style={{ top: -70, left: -60, width: 260, height: 260, background: 'var(--st-violet)', opacity: 0.55 }}
+      />
+
+      <TopBar
+        meta={`Mesa ${idMesa} · En vivo`}
+        derecha={
+          <button className="st-back" onClick={handleCompartir} aria-label="Compartir la mesa">
+            <Share2 size={19} strokeWidth={2.2} color="var(--st-lime)" />
           </button>
-        </div>
+        }
+      />
+
+      <div style={{ padding: '20px 22px 0' }}>
+        <StepBar paso={2} />
       </div>
 
-      <div className="content-wrapper">
-        
-        <div style={{ textAlign: 'center', margin: '24px 0 32px' }}>
-          <div className="section-label">Código de la Mesa</div>
-          <div style={{ fontSize: '48px', fontWeight: '800', letterSpacing: '0.1em', color: 'var(--text-1)' }}>
-            7823
+      <div className="st-body" style={{ paddingTop: 20 }}>
+        <div className="st-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+            <span className="st-label">Están en</span>
+            <span className="st-num" style={{ fontSize: 38 }}>Mesa {idMesa}</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+            <span className="st-chip" style={{ background: 'rgba(184,241,78,0.14)', color: 'var(--st-lime)' }}>
+              <span className="st-dot" style={{ background: 'var(--st-lime)' }} />
+              {conectados.length} {conectados.length === 1 ? 'CONECTADO' : 'CONECTADOS'}
+            </span>
+            <span style={{ fontSize: 12.5, color: 'var(--st-text-3)', fontWeight: 500 }}>Comparte para que entren</span>
           </div>
         </div>
 
-        <div className="section-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Users size={16} /> {conectados.length} Personas conectadas
-        </div>
+        <h2 className="st-h2" style={{ marginTop: 22 }}>En la mesa</h2>
 
-        <div className="card" style={{ padding: '0' }}>
-          {conectados.map((c, i) => (
-            <div key={i} className={`list-item animate-pop stagger-${i + 1}`} style={{ padding: '16px' }}>
-              <div className="avatar-circle" style={{ animation: 'wiggle 2s ease-in-out infinite', animationDelay: `${i * 0.5}s` }}>
-                {c.avatar}
+        {cargando ? (
+          <div className="st-empty">Buscando a los demás…</div>
+        ) : (
+          <div className="st-diners" style={{ marginTop: 14 }}>
+            {conectados.map((c, i) => {
+              const color = colorComensal(c.avatar, c.nombre)
+              const soyYo = c.id_comensal === user.id
+              return (
+                <div
+                  key={c.id_comensal || i}
+                  className="st-diner st-pop"
+                  style={{ background: color.hex, color: color.fg, animationDelay: `${i * 0.12}s` }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                    <div
+                      className="st-tile"
+                      style={{ width: 44, height: 44, borderRadius: 14, background: 'rgba(21,10,36,0.14)', color: color.fg, fontSize: 22 }}
+                    >
+                      {inicial(c.nombre)}
+                    </div>
+                    {soyYo && isLider && (
+                      <span
+                        className="st-chip"
+                        style={{ background: 'var(--st-ink)', color: color.hex, fontSize: 9, padding: '4px 8px' }}
+                      >
+                        ANFITRIÓN
+                      </span>
+                    )}
+                  </div>
+                  <div className="st-diner__name">
+                    {c.nombre}
+                    {soyYo && <span style={{ fontSize: 14, fontWeight: 600, opacity: 0.6 }}> (tú)</span>}
+                  </div>
+                </div>
+              )
+            })}
+
+            {/* Un lugar libre siempre visible: la mesa sigue abierta. */}
+            <div className="st-diner st-diner--empty">
+              <div
+                className="st-tile"
+                style={{ width: 44, height: 44, borderRadius: 14, background: 'var(--st-surface)', color: 'var(--st-text-3)', fontSize: 24 }}
+              >
+                +
               </div>
-              <div style={{ flex: 1, fontSize: '17px', fontWeight: '600' }}>{c.nombre}</div>
-              {c.isLider && <div style={{ fontSize: '13px', color: 'var(--text-3)', fontWeight: '500' }}>Líder</div>}
+              <div style={{ fontSize: 13, fontWeight: 600, textAlign: 'center' }}>Esperando…</div>
             </div>
-          ))}
-          <div className={`list-item animate-fade-in stagger-${conectados.length + 1}`} style={{ padding: '16px', opacity: 0.5 }}>
-            <div className="avatar-circle" style={{ background: 'var(--bg)' }}></div>
-            <div style={{ flex: 1, fontSize: '17px', fontStyle: 'italic' }}>Esperando a otros...</div>
           </div>
-        </div>
+        )}
 
         {isLider && (
-          <p style={{ fontSize: '14px', color: 'var(--text-2)', textAlign: 'center', margin: '24px 16px' }}>
-            Eres el líder. Decide cuándo empezar el pedido por todos.
-          </p>
+          <div
+            className="st-note"
+            style={{ marginTop: 18, background: 'rgba(122,61,245,0.22)', border: '2px solid var(--st-violet)', color: '#e2d7fb' }}
+          >
+            <Info size={20} strokeWidth={2.2} color="#c9b4ff" style={{ flexShrink: 0 }} />
+            <span>Eres el anfitrión: tú eliges cómo se paga y cuándo se manda todo a cocina.</span>
+          </div>
         )}
-      </div>
 
-      <div className="native-bottom-bar">
-        {isLider ? (
-          <button 
-            className="wf-btn-solid" 
-            onClick={() => navigate(`/mesa/${idMesa}/pago-modo`)}
-          >
-            Configurar pago e Iniciar
+        <div className="st-footer">
+          {isLider ? (
+            <button className="st-btn st-btn--primary" onClick={() => navigate(`/mesa/${idMesa}/pago-modo`)}>
+              Empezar el pedido
+            </button>
+          ) : (
+            <button className="st-btn st-btn--primary" onClick={() => navigate(`/mesa/${idMesa}/menu`)}>
+              Ver el menú
+            </button>
+          )}
+          <button className="st-btn st-btn--outline" onClick={handleCompartir}>
+            Compartir la sala
           </button>
-        ) : (
-          <button 
-            className="wf-btn-outline" 
-            onClick={() => navigate(`/mesa/${idMesa}/menu`)}
-          >
-            Ver menú mientras esperamos
-          </button>
-        )}
+        </div>
       </div>
-    </>
+    </div>
   )
 }
