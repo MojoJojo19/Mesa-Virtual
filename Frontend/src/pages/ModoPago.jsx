@@ -49,10 +49,12 @@ export default function ModoPago() {
 
   const handleContinuar = () => {
     if (!modoSeleccionado) return
+    // Ojo: aquí NO se toca `isLider`. Antes se ponía en true, así que pasar
+    // por esta pantalla ascendía a anfitrión a cualquiera. Quién lo es lo
+    // decide el orden de llegada (ver esAnfitrion en theme/sala).
     localStorage.setItem('swifttable_user', JSON.stringify({
       ...user,
-      modoPago: modoSeleccionado,
-      isLider: true // Quien configura el pago queda como anfitrión de la mesa.
+      modoPago: modoSeleccionado
     }))
     navigate(`/mesa/${idMesa}/menu`)
   }

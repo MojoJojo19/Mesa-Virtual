@@ -5,7 +5,7 @@ import { getComensalesDeMesa, cerrarSesionComensal } from '../services/api'
 import { useToast } from '../components/Toast'
 import TopBar from '../components/TopBar'
 import StepBar from '../components/StepBar'
-import { colorComensal, inicial } from '../theme/sala'
+import { colorComensal, inicial, esAnfitrion } from '../theme/sala'
 
 export default function Lobby() {
   const { idMesa } = useParams()
@@ -13,8 +13,10 @@ export default function Lobby() {
   const { toast } = useToast()
 
   const user = JSON.parse(localStorage.getItem('swifttable_user') || '{}')
-  const isLider = user.isLider || false
 
+  // Se recalcula con cada sondeo: si el anfitrión se va, el siguiente en
+  // llegar hereda el papel sin que haya que volver a entrar.
+  const [isLider, setIsLider] = useState(user.isLider || false)
   const [conectados, setConectados] = useState([])
   const [cargando, setCargando] = useState(true)
   const [confirmandoSalida, setConfirmandoSalida] = useState(false)
@@ -43,6 +45,17 @@ export default function Lobby() {
 
       setConectados(activos)
       setCargando(false)
+
+      // PedidoGrupal y Resumen leen `isLider` de localStorage, así que hay que
+      // dejarlo al día ahí también, no solo en el estado de esta pantalla.
+      const anfitrion = esAnfitrion(activos, user.id)
+      setIsLider(anfitrion)
+      try {
+        const guardado = JSON.parse(localStorage.getItem('swifttable_user') || '{}')
+        if (guardado.isLider !== anfitrion) {
+          localStorage.setItem('swifttable_user', JSON.stringify({ ...guardado, isLider: anfitrion }))
+        }
+      } catch { /* localStorage ilegible */ }
     }
 
     sincronizar()

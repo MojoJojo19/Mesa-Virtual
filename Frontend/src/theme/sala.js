@@ -51,6 +51,26 @@ export function inicial(nombre) {
   return limpio ? limpio.charAt(0).toUpperCase() : '?'
 }
 
+/**
+ * ¿Es este comensal el anfitrión de la mesa?
+ *
+ * El anfitrión es el primero que se sentó: el de menor `id_comensal` entre los
+ * que siguen activos. Antes cada dispositivo se marcaba a sí mismo como
+ * anfitrión al entrar, así que todos veían el distintivo, todos entraban a
+ * elegir el modo de pago y, en "tú invitas", a cada uno se le mostraba el total
+ * de la mesa entera como si le tocara pagarlo.
+ *
+ * Sin lista (backend caído, o todavía no hay nadie más) devuelve `true`: el
+ * único comensal que conocemos es uno mismo.
+ */
+export function esAnfitrion(comensales, idComensal) {
+  const activos = (comensales || []).filter(c => c.estado_sesion !== 'inactiva')
+  if (activos.length === 0) return true
+
+  const primero = activos.reduce((min, c) => (c.id_comensal < min.id_comensal ? c : min), activos[0])
+  return primero.id_comensal === idComensal
+}
+
 /* ---------------------------------------------------------------- */
 
 /**

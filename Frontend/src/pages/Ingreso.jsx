@@ -1,10 +1,10 @@
 import React, { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { crearComensal, actualizarEstadoMesa } from '../services/api'
+import { crearComensal, actualizarEstadoMesa, getComensalesDeMesa } from '../services/api'
 import { useToast } from '../components/Toast'
 import TopBar from '../components/TopBar'
 import StepBar from '../components/StepBar'
-import { COLORES_COMENSAL, inicial } from '../theme/sala'
+import { COLORES_COMENSAL, inicial, esAnfitrion } from '../theme/sala'
 
 const MAX_NOMBRE = 15
 
@@ -29,12 +29,16 @@ export default function Ingreso() {
     setCargando(false)
 
     if (nuevoComensal) {
+      // Anfitrión es quien llegó primero, no quien tenga este dispositivo.
+      // Se consulta después de crearlo para que la lista ya lo incluya.
+      const enLaMesa = await getComensalesDeMesa(idMesa).catch(() => [])
+
       localStorage.setItem('swifttable_user', JSON.stringify({
         id: nuevoComensal.id_comensal,
         nombre: nuevoComensal.nombre,
         avatar: nuevoComensal.avatar,
         idMesa,
-        isLider: true,
+        isLider: esAnfitrion(enLaMesa, nuevoComensal.id_comensal),
         modoPago: 'individual'
       }))
 
