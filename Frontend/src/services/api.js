@@ -59,6 +59,139 @@ const fetchWithTimeout = async (url, options = {}) => {
   return response;
 };
 
+// ─── Sesión del personal ─────────────────────────────────────────
+/* El panel se abría con un PIN cableado en SelectorRol.jsx (1234 / 4321).
+   Ahora la sesión sale de POST /api/auth/login y vive aquí. */
+
+const CLAVE_SESION = 'swifttable_sesion_staff';
+
+export const getSesionStaff = () => {
+  try {
+    return JSON.parse(localStorage.getItem(CLAVE_SESION) || 'null');
+  } catch {
+    return null;
+  }
+};
+
+export const haySesionStaff = () => Boolean(getSesionStaff()?.access_token);
+
+/** Cabecera Bearer para los endpoints protegidos; vacía si no hay sesión. */
+export const authHeaders = () => {
+  const sesion = getSesionStaff();
+  return sesion?.access_token ? { Authorization: `Bearer ${sesion.access_token}` } : {};
+};
+
+export const cerrarSesionStaff = () => {
+  localStorage.removeItem(CLAVE_SESION);
+  localStorage.removeItem('swifttable_id_restaurante');
+  localStorage.removeItem('swifttable_nombre_restaurante');
+};
+
+/**
+ * Corta la sesión cuando el backend responde 401.
+ *
+ * Importa por el patrón de esta capa: cada llamada cae a datos mock si algo
+ * falla, así que un token vencido (dura 60 min) habría llenado el panel de
+ * cifras inventadas sin avisar. Mejor devolver al login.
+ */
+const verificarSesion = (res) => {
+  if (res.status !== 401) return;
+  cerrarSesionStaff();
+  if (window.location.pathname.startsWith('/logistica')) window.location.replace('/');
+  throw new Error('Tu sesión expiró. Vuelve a iniciar sesión.');
+};
+
+/**
+ * Login real del personal contra el backend.
+ *
+ * A diferencia del resto de llamadas, esta NO tiene respaldo mock a propósito:
+ * un fallback local sería otra vez un PIN cableado. Sin backend no se entra al
+ * panel. El endpoint usa OAuth2PasswordRequestForm, así que espera el cuerpo
+ * como formulario (username / password), no como JSON.
+ */
+export const loginStaff = async (correo, contrasena) => {
+  const cuerpo = new URLSearchParams();
+  cuerpo.append('username', correo);
+  cuerpo.append('password', contrasena);
+
+  let res;
+  try {
+    res = await fetchWithTimeout(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: cuerpo.toString(),
+      timeout: 8000
+    });
+  } catch {
+    throw new Error('No se pudo conectar con el servidor. ¿Está encendido el backend?');
+  }
+
+  if (res.status === 401) throw new Error('Correo o contraseña incorrectos.');
+  if (!res.ok) throw new Error('No se pudo iniciar sesión. Inténtalo de nuevo.');
+
+  const sesion = await res.json();
+  localStorage.setItem(CLAVE_SESION, JSON.stringify(sesion));
+  // El resto del panel sigue leyendo estas dos claves.
+  localStorage.setItem('swifttable_id_restaurante', String(sesion.id_restaurante));
+  localStorage.setItem('swifttable_nombre_restaurante', sesion.nombre_restaurante || 'SwiftTable');
+  return sesion;
+};
+
+// ─── Administración ──────────────────────────────────────────────
+/* Todo esto es del panel de administración y exige token. A diferencia del
+   resto del archivo NO cae a datos mock: en administración, un fallback
+   silencioso haría creer que se guardó algo que nunca se guardó. */
+
+/** Origen del backend, sin el sufijo /api. Sirve para las imágenes de QR. */
+export const BACKEND_ORIGIN = API_URL.replace(/\/api\/?$/, '');
+
+const pedirAdmin = async (ruta, opciones = {}) => {
+  const { cuerpo, method = 'GET', ...resto } = opciones;
+  let res;
+  try {
+    res = await fetchWithTimeout(`${API_URL}${ruta}`, {
+      method,
+      headers: {
+        ...(cuerpo ? { 'Content-Type': 'application/json' } : {}),
+        ...authHeaders()
+      },
+      ...(cuerpo ? { body: JSON.stringify(cuerpo) } : {}),
+      timeout: 8000,
+      ...resto
+    });
+  } catch {
+    throw new Error('No se pudo conectar con el servidor.');
+  }
+
+  verificarSesion(res);
+  if (!res.ok) {
+    const detalle = await res.json().catch(() => ({}));
+    throw new Error(detalle.detail || 'La operación no se pudo completar.');
+  }
+  return res.status === 204 ? null : res.json();
+};
+
+// Mesas. El listado de gestión trae PIN y QR; el público los oculta.
+export const getMesasGestion   = () => pedirAdmin('/mesas/gestion');
+export const crearMesa         = (numero) => pedirAdmin('/mesas/', { method: 'POST', cuerpo: { numero: parseInt(numero) } });
+
+// Categorías
+export const crearCategoria    = (nombre, descripcion) =>
+  pedirAdmin('/categorias/', { method: 'POST', cuerpo: { nombre, descripcion: descripcion || null } });
+export const eliminarCategoria = (id) => pedirAdmin(`/categorias/${id}`, { method: 'DELETE' });
+
+// Productos. `incluir_inactivos` deja ver los retirados para reactivarlos.
+export const getProductosGestion = (idRestaurante) =>
+  pedirAdmin(`/productos/?incluir_inactivos=true${idRestaurante ? `&id_restaurante=${idRestaurante}` : ''}`);
+export const crearProducto     = (datos) => pedirAdmin('/productos/', { method: 'POST', cuerpo: datos });
+export const actualizarProducto = (id, datos) => pedirAdmin(`/productos/${id}`, { method: 'PUT', cuerpo: datos });
+export const desactivarProducto = (id) => pedirAdmin(`/productos/${id}`, { method: 'DELETE' });
+
+// Usuarios (personal del local)
+export const getUsuarios       = () => pedirAdmin('/usuarios/');
+export const crearUsuario      = (datos) => pedirAdmin('/usuarios/', { method: 'POST', cuerpo: datos });
+export const desactivarUsuario = (id) => pedirAdmin(`/usuarios/${id}`, { method: 'DELETE' });
+
 // ─── API calls ───────────────────────────────────────────────────
 export const getPlatos = async (idRestaurante = null) => {
   try {
@@ -124,6 +257,31 @@ export const getComensalesDeMesa = async (idMesa) => {
     return []
   }
 }
+
+/**
+ * Marca la sesión del comensal como inactiva y borra su rastro local.
+ *
+ * El endpoint existía desde el principio pero nadie lo llamaba: un comensal
+ * no tenía forma de salir de la mesa por su cuenta, había que esperar a que
+ * el personal la liberara. No se borra el comensal (rompería el historial de
+ * sus pedidos), solo se cierra su sesión.
+ */
+export const cerrarSesionComensal = async (idComensal) => {
+  try {
+    if (idComensal) {
+      await fetchWithTimeout(`${API_URL}/comensales/${idComensal}/cerrar-sesion`, {
+        method: 'PUT'
+      });
+    }
+  } catch {
+    // Sin backend igual limpiamos el dispositivo: es lo que ve el comensal.
+    console.warn('Backend no disponible: la sesión solo se cerró localmente');
+  } finally {
+    localStorage.removeItem('swifttable_user');
+    localStorage.removeItem('swifttable_carrito');
+  }
+  return { id_comensal: idComensal, estado_sesion: 'inactiva' };
+};
 
 export const validarPin = async (idMesa, pin) => {
   try {
@@ -353,8 +511,10 @@ export const getAsistencias = async (idRestaurante = null) => {
 export const atenderAsistencia = async (idAsistencia) => {
   try {
     const res = await fetchWithTimeout(`${API_URL}/asistencias/${idAsistencia}/atender`, {
-      method: 'PUT'
+      method: 'PUT',
+      headers: authHeaders()
     });
+    verificarSesion(res);
     if (!res.ok) throw new Error('Error');
     return await res.json();
   } catch {
@@ -462,8 +622,10 @@ const getMockPedidosLocales = () => {
 export const liberarMesa = async (idMesa) => {
   try {
     const res = await fetchWithTimeout(`${API_URL}/mesas/${idMesa}/liberar`, {
-      method: 'POST'
+      method: 'POST',
+      headers: authHeaders()
     });
+    verificarSesion(res);
     if (!res.ok) throw new Error('Error');
     return await res.json();
   } catch {
@@ -628,7 +790,7 @@ export const registrarPago = async (idPedido, montoTotal, propina, metodoPago) =
   try {
     const res = await fetchWithTimeout(`${API_URL}/pagos/`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error('Error');
@@ -663,6 +825,74 @@ export const registrarPago = async (idPedido, montoTotal, propina, metodoPago) =
       localStorage.setItem('swifttable_mock_pagos', JSON.stringify(actuales));
     } catch (e) {
       console.error(e);
+    }
+    return nuevoPago;
+  }
+};
+
+/* Recargo por servicio. Tiene que coincidir con PORCENTAJE_SERVICIO del
+   backend (App/API/pagos.py); solo se usa para el cálculo del modo mock. */
+export const PORCENTAJE_SERVICIO = 0.10;
+
+/**
+ * Cobra la mesa completa: un solo pago que cubre todos sus pedidos activos.
+ *
+ * Antes la caja llamaba a `registrarPago` con `pedidosMesa[0]` aunque cobrara
+ * el total de la mesa, así que la boleta solo listaba los platos del primer
+ * pedido. El monto lo calcula el backend a partir de los detalles: aquí solo
+ * viajan el método de pago y la propina.
+ */
+export const cobrarMesa = async (idMesa, metodoPago, propina = 0) => {
+  try {
+    const res = await fetchWithTimeout(`${API_URL}/pagos/mesa/${idMesa}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({
+        metodo_pago: metodoPago,
+        propina: propina ? parseFloat(propina) : 0
+      })
+    });
+    verificarSesion(res);
+    if (!res.ok) {
+      const detalle = await res.json().catch(() => ({}));
+      throw new Error(detalle.detail || 'No se pudo cobrar la mesa');
+    }
+    return await res.json();
+  } catch (e) {
+    // Sin backend: un único pago mock que junta los platos de todos los
+    // pedidos activos de la mesa, igual que hace el endpoint real.
+    const mockPeds = getMockPedidosLocales();
+    const pedidosMesa = (mockPeds[String(idMesa)] || [])
+      .filter(p => p.estado !== 'pagado' && p.estado !== 'cancelado');
+
+    const items = pedidosMesa.flatMap(p => p.items || []);
+    const subtotal = items.reduce((acc, it) => acc + Number(it.precio) * it.cantidad, 0);
+
+    const nuevoPago = {
+      id_pago: Date.now(),
+      id_pedido: pedidosMesa.length ? pedidosMesa[0].id_pedido : null,
+      id_mesa: parseInt(idMesa),
+      monto_total: Number((subtotal * (1 + PORCENTAJE_SERVICIO)).toFixed(2)),
+      propina: propina ? parseFloat(propina) : 0,
+      metodo_pago: metodoPago,
+      fecha_pago: new Date().toISOString(),
+      subtotal: Number(subtotal.toFixed(2)),
+      items
+    };
+
+    try {
+      const actuales = JSON.parse(localStorage.getItem('swifttable_mock_pagos') || '[]');
+      actuales.push(nuevoPago);
+      localStorage.setItem('swifttable_mock_pagos', JSON.stringify(actuales));
+
+      // Los pedidos cobrados dejan de estar activos, como en el backend.
+      const todos = getMockPedidosLocales();
+      todos[String(idMesa)] = (todos[String(idMesa)] || []).map(p =>
+        pedidosMesa.some(pm => pm.id_pedido === p.id_pedido) ? { ...p, estado: 'pagado' } : p
+      );
+      localStorage.setItem('swifttable_mock_pedidos', JSON.stringify(todos));
+    } catch (err) {
+      console.error(err);
     }
     return nuevoPago;
   }
@@ -726,7 +956,8 @@ const seedMockPagos = () => {
 export const getPagos = async (idRestaurante = null) => {
   try {
     const url = idRestaurante ? `${API_URL}/pagos/?id_restaurante=${idRestaurante}` : `${API_URL}/pagos/`
-    const res = await fetchWithTimeout(url);
+    const res = await fetchWithTimeout(url, { headers: authHeaders() });
+    verificarSesion(res);
     if (!res.ok) throw new Error('Error');
     const pagosList = await res.json();
     
@@ -769,8 +1000,10 @@ export const getPagos = async (idRestaurante = null) => {
 export const actualizarEstadoPedido = async (idPedido, nuevoEstado) => {
   try {
     const res = await fetchWithTimeout(`${API_URL}/pedidos/${idPedido}/estado?nuevo_estado=${nuevoEstado}`, {
-      method: 'PUT'
+      method: 'PUT',
+      headers: authHeaders()
     });
+    verificarSesion(res);
     if (!res.ok) throw new Error('Error');
     return await res.json();
   } catch {

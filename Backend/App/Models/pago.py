@@ -1,3 +1,4 @@
+from decimal import Decimal
 from sqlalchemy import Column, Integer, Numeric, Enum, DateTime, ForeignKey
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -24,27 +25,55 @@ class Pago(Base):
 
     # Relaciones
     restaurante = relationship("Restaurante", back_populates="pagos")
-    pedido = relationship("Pedido", back_populates="pago")
+    pedido = relationship(
+        "Pedido", back_populates="pago", foreign_keys="Pago.id_pedido"
+    )
+    # Todos los pedidos que cubre este pago. Al cobrar una mesa completa son
+    # varios; `id_pedido` es UNIQUE y solo puede apuntar a uno.
+    pedidos_cubiertos = relationship(
+        "Pedido", back_populates="pago_cubierto", foreign_keys="Pedido.id_pago"
+    )
 
-    # --- Datos derivados del pedido ---
+    # --- Datos derivados de los pedidos ---
     # La caja y la boleta necesitan saber de qué mesa salió el pago y qué se
     # consumió. Ambos viven en el pedido, así que se exponen desde aquí en vez
     # de duplicar columnas en la tabla de pagos.
 
     @property
+    def _pedidos(self):
+        """
+        Los pedidos que hay que leer para armar la boleta.
+
+        Los pagos creados al cobrar una mesa completa traen `pedidos_cubiertos`;
+        los antiguos (y los de un solo pedido) solo tienen `pedido`.
+        """
+        if self.pedidos_cubiertos:
+            return self.pedidos_cubiertos
+        return [self.pedido] if self.pedido else []
+
+    @property
     def id_mesa(self):
-        return self.pedido.id_mesa if self.pedido else None
+        pedidos = self._pedidos
+        return pedidos[0].id_mesa if pedidos else None
 
     @property
     def items(self):
-        if not self.pedido:
-            return []
         return [
             {
                 "nombre": d.producto.nombre if d.producto else "Producto #%s" % d.id_producto,
                 "cantidad": d.cantidad,
                 "precio": d.precio_unitario,
             }
-            for d in self.pedido.detalles
+            for pedido in self._pedidos
+            for d in pedido.detalles
         ]
+
+    @property
+    def subtotal(self):
+        """Consumo puro, sin el recargo por servicio ni la propina."""
+        total = Decimal("0")
+        for pedido in self._pedidos:
+            for d in pedido.detalles:
+                total += d.subtotal or Decimal("0")
+        return total
     

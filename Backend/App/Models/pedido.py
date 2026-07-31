@@ -24,10 +24,22 @@ class Pedido(Base):
     id_comensal = Column(Integer, ForeignKey("comensales.id_comensal"), nullable=True)
     id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario"), nullable=True)
 
+    # Pago que cubre este pedido. Cuando la caja cobra una mesa completa, un
+    # mismo pago cubre todos los pedidos de esa mesa; `Pago.id_pedido` solo
+    # apunta al primero de ellos porque es una columna UNIQUE.
+    id_pago = Column(Integer, ForeignKey("pagos.id_pago"), nullable=True, index=True)
+
     # Relaciones
     restaurante = relationship("Restaurante", back_populates="pedidos")
     detalles = relationship("DetallePedido", back_populates="pedido", cascade="all, delete-orphan")
-    pago = relationship("Pago", back_populates="pedido", uselist=False)
+    # Hay dos caminos de clave foránea entre pedidos y pagos, así que cada
+    # relación tiene que decir por cuál va.
+    pago = relationship(
+        "Pago", back_populates="pedido", uselist=False, foreign_keys="Pago.id_pedido"
+    )
+    pago_cubierto = relationship(
+        "Pago", back_populates="pedidos_cubiertos", foreign_keys="Pedido.id_pago"
+    )
     mesa = relationship("Mesa", back_populates="pedidos")
     comensal = relationship("Comensal", back_populates="pedidos")
     usuario = relationship("Usuario", back_populates="pedidos")

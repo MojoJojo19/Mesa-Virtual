@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Bell, FileText, ChevronLeft, RefreshCw, CheckCircle, Clock, Plus, Volume2, VolumeX,
-  X, Users, Utensils, ChefHat, ConciergeBell, Receipt, DollarSign, Snowflake, Sparkles
+  X, Users, Utensils, ChefHat, ConciergeBell, Receipt, DollarSign, Snowflake, Sparkles, LogOut,
+  Settings
 } from 'lucide-react'
 import {
   getAsistencias, atenderAsistencia, simularLlamadoDesdePanel, getMesas, liberarMesa,
-  getPedidosDeMesa, registrarPago, actualizarEstadoPedido, getPagos, getPedidosTodos
+  getPedidosDeMesa, cobrarMesa, actualizarEstadoPedido, getPagos, getPedidosTodos,
+  cerrarSesionStaff
 } from '../services/api'
 import { useToast } from '../components/Toast'
 import { colorComensal, inicial } from '../theme/sala'
@@ -41,8 +43,18 @@ const ESTADO_PEDIDO = {
   pendiente:        { label: 'Pendiente',  color: 'var(--st-amber)' },
   en_preparacion:   { label: 'En cocina',  color: 'var(--st-amber)' },
   listo_para_servir:{ label: 'Listo',      color: 'var(--st-cyan)' },
-  servido:          { label: 'Entregado',  color: 'var(--st-lime)' }
+  servido:          { label: 'Entregado',  color: 'var(--st-lime)' },
+  pagado:           { label: 'Pagado',     color: 'var(--st-text-3)' },
+  cancelado:        { label: 'Anulado',    color: 'var(--st-text-3)' }
 }
+
+/* Los que acepta el enum metodopago del backend. */
+const METODOS_PAGO = [
+  { id: 'efectivo', label: 'Efectivo' },
+  { id: 'tarjeta',  label: 'Tarjeta' },
+  { id: 'yape',     label: 'Yape' },
+  { id: 'plin',     label: 'Plin' }
+]
 
 export default function Logistica() {
   const navigate = useNavigate()
@@ -65,6 +77,8 @@ export default function Logistica() {
   const [pagos, setPagos] = useState([])
   const [todosPedidos, setTodosPedidos] = useState([])
   const [ticketSeleccionado, setTicketSeleccionado] = useState(null)
+  const [metodoPago, setMetodoPago] = useState('efectivo')
+  const [cobrando, setCobrando] = useState(false)
 
   const asistenciasPrevias = useRef(new Set())
 
@@ -203,24 +217,37 @@ export default function Logistica() {
   }
 
   const handleRegistrarPagoCerrar = async () => {
-    if (!mesaSeleccionada) return
-    const subtotal = pedidosMesa.reduce((acc, ped) =>
-      acc + ped.items.reduce((s, it) => s + (Number(it.precio) * it.cantidad), 0), 0)
-    const totalPagar = subtotal * 1.10
+    if (!mesaSeleccionada || cobrando) return
+    setCobrando(true)
 
     try {
-      const primerPedido = pedidosMesa[0]
-      if (primerPedido) await registrarPago(primerPedido.id_pedido, totalPagar, 0, 'efectivo')
+      // Un solo pago cubre todos los pedidos activos de la mesa. El monto lo
+      // calcula el backend desde los detalles, así que aquí no se envía:
+      // antes se cobraba el total pero se registraba contra el primer pedido.
+      const pago = await cobrarMesa(mesaSeleccionada.id_mesa, metodoPago)
 
+      // Recién con la cuenta cobrada tiene sentido liberar la mesa.
       const mesaLiberada = await liberarMesa(mesaSeleccionada.id_mesa)
-      toast(`Pago de S/ ${totalPagar.toFixed(2)} registrado. Mesa ${mesaSeleccionada.numero} liberada.`, 'success')
+      toast(
+        `Pago de S/ ${Number(pago.monto_total).toFixed(2)} registrado. Mesa ${mesaSeleccionada.numero} liberada.`,
+        'success'
+      )
 
       setMesas(prev => prev.map(m => m.id_mesa === mesaSeleccionada.id_mesa ? mesaLiberada : m))
       setMesaSeleccionada(null)
+      setMetodoPago('efectivo')
       cargarDatos()
     } catch (e) {
-      toast('Error al registrar el pago', 'error')
+      // La mesa no se libera si el cobro falló: así no se pierde la cuenta.
+      toast(e.message || 'Error al registrar el pago', 'error')
+    } finally {
+      setCobrando(false)
     }
+  }
+
+  const handleCerrarSesion = () => {
+    cerrarSesionStaff()
+    navigate('/')
   }
 
   const handleSimular = () => {
@@ -767,9 +794,30 @@ export default function Logistica() {
               </div>
 
               {solicitaCuenta ? (
-                <button className="st-act st-act--go" style={{ marginTop: 8, padding: 14 }} onClick={handleRegistrarPagoCerrar}>
-                  Cobrar S/ {totalPagar.toFixed(2)} y cerrar mesa
-                </button>
+                <>
+                  <div className="st-label" style={{ marginTop: 8 }}>Método de pago</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {METODOS_PAGO.map(m => (
+                      <button
+                        key={m.id}
+                        className={`st-act st-act--sm ${metodoPago === m.id ? 'st-act--go' : 'st-act--quiet'}`}
+                        onClick={() => setMetodoPago(m.id)}
+                        aria-pressed={metodoPago === m.id}
+                      >
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    className="st-act st-act--go"
+                    style={{ marginTop: 8, padding: 14 }}
+                    onClick={handleRegistrarPagoCerrar}
+                    disabled={cobrando}
+                  >
+                    {cobrando ? 'Cobrando…' : `Cobrar S/ ${totalPagar.toFixed(2)} y cerrar mesa`}
+                  </button>
+                </>
               ) : (
                 <button
                   className="st-act st-act--danger"
@@ -794,9 +842,14 @@ export default function Logistica() {
 
   const renderBoleta = () => {
     if (!ticketSeleccionado) return null
-    const subtotal = Number(ticketSeleccionado.monto_total || 0) - Number(ticketSeleccionado.propina || 0)
-    const baseVal = subtotal / 1.10
-    const servicioVal = baseVal * 0.10
+    // El monto no incluye la propina (la caja la reporta aparte), así que
+    // restarla desbalanceaba la boleta. El backend ya manda el consumo puro;
+    // para pagos antiguos, que no lo traen, se deduce del total.
+    const montoTotal = Number(ticketSeleccionado.monto_total || 0)
+    const baseVal = ticketSeleccionado.subtotal != null
+      ? Number(ticketSeleccionado.subtotal)
+      : montoTotal / 1.10
+    const servicioVal = montoTotal - baseVal
 
     return (
       <div className="st-modal-backdrop" onClick={() => setTicketSeleccionado(null)} role="dialog" aria-modal="true">
@@ -847,7 +900,9 @@ export default function Logistica() {
                 <div className="st-ticket__row"><span>Propina</span><span>S/ {Number(ticketSeleccionado.propina).toFixed(2)}</span></div>
               )}
               <div className="st-ticket__row" style={{ fontWeight: 800, fontSize: 14, marginTop: 4 }}>
-                <span>TOTAL</span><span>S/ {Number(ticketSeleccionado.monto_total).toFixed(2)}</span>
+                {/* La propina se suma aquí: no está incluida en monto_total. */}
+                <span>TOTAL</span>
+                <span>S/ {(montoTotal + Number(ticketSeleccionado.propina || 0)).toFixed(2)}</span>
               </div>
             </div>
 
@@ -892,6 +947,12 @@ export default function Logistica() {
           </button>
           <button className="st-back" onClick={() => cargarDatos(true)} aria-label="Actualizar datos">
             <RefreshCw size={18} strokeWidth={2.2} className={cargando ? 'animate-spin' : ''} />
+          </button>
+          <button className="st-back" onClick={() => navigate('/admin')} aria-label="Administración" title="Administración">
+            <Settings size={18} strokeWidth={2.2} />
+          </button>
+          <button className="st-back" onClick={handleCerrarSesion} aria-label="Cerrar sesión" title="Cerrar sesión">
+            <LogOut size={18} strokeWidth={2.2} />
           </button>
         </div>
 

@@ -7,6 +7,9 @@ from App.Models.detalle_pedido import DetallePedido
 from App.Models.producto import Producto
 from App.Schemas.pedido import PedidoCreate, PedidoResponse
 
+from App.Models.usuario import Usuario
+from App.Core.security import obtener_usuario_actual
+
 router = APIRouter(prefix="/api/pedidos", tags=["Pedidos"])
 
 @router.post("/", response_model=PedidoResponse)
@@ -33,7 +36,12 @@ def pedidos_por_mesa(id_mesa: int, db: Session = Depends(get_db)):
     return db.query(Pedido).filter(Pedido.id_mesa == id_mesa).all()
 
 @router.put("/{id}/estado", response_model=PedidoResponse)
-def actualizar_estado_pedido(id: int, nuevo_estado: EstadoPedido, db: Session = Depends(get_db)):
+def actualizar_estado_pedido(
+    id: int,
+    nuevo_estado: EstadoPedido,
+    db: Session = Depends(get_db),
+    usuario_actual: Usuario = Depends(obtener_usuario_actual),
+):
     pedido = db.query(Pedido).filter(Pedido.id_pedido == id).first()
     if not pedido:
         raise HTTPException(status_code=404, detail="Pedido no encontrado")

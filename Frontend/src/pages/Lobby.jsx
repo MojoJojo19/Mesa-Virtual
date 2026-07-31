@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Share2, Info } from 'lucide-react'
-import { getComensalesDeMesa } from '../services/api'
+import { Share2, Info, LogOut } from 'lucide-react'
+import { getComensalesDeMesa, cerrarSesionComensal } from '../services/api'
 import { useToast } from '../components/Toast'
 import TopBar from '../components/TopBar'
 import StepBar from '../components/StepBar'
@@ -17,6 +17,7 @@ export default function Lobby() {
 
   const [conectados, setConectados] = useState([])
   const [cargando, setCargando] = useState(true)
+  const [confirmandoSalida, setConfirmandoSalida] = useState(false)
   // Para avisar solo de los que van llegando, no de los que ya estaban.
   const conocidos = useRef(null)
 
@@ -61,6 +62,12 @@ export default function Lobby() {
     } catch {
       // El usuario canceló el diálogo de compartir: no hay nada que informar.
     }
+  }
+
+  const handleSalirDeLaMesa = async () => {
+    await cerrarSesionComensal(user.id)
+    toast('Saliste de la mesa', 'info')
+    navigate('/')
   }
 
   return (
@@ -173,6 +180,41 @@ export default function Lobby() {
           <button className="st-btn st-btn--outline" onClick={handleCompartir}>
             Compartir la sala
           </button>
+
+          {/* Hasta ahora un comensal no podía salir solo: había que esperar a
+              que el personal liberara la mesa. */}
+          {confirmandoSalida ? (
+            <div className="st-card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <span style={{ fontSize: 14.5, fontWeight: 600 }}>
+                ¿Seguro que quieres salir? Se vaciará tu carrito.
+              </span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  className="st-btn st-btn--outline st-btn--sm"
+                  style={{ flex: 1 }}
+                  onClick={() => setConfirmandoSalida(false)}
+                >
+                  Quedarme
+                </button>
+                <button
+                  className="st-btn st-btn--primary st-btn--sm"
+                  style={{ flex: 1 }}
+                  onClick={handleSalirDeLaMesa}
+                >
+                  Sí, salir
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              className="st-btn st-btn--outline"
+              onClick={() => setConfirmandoSalida(true)}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            >
+              <LogOut size={18} strokeWidth={2.2} />
+              Salir de la mesa
+            </button>
+          )}
         </div>
       </div>
     </div>

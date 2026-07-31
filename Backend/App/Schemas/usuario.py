@@ -5,9 +5,13 @@ class UsuarioCreate(BaseModel):
     correo: EmailStr
     contrasena: str
     rol: str
+    # La columna es NOT NULL en la base: sin esto, crear un usuario por API
+    # siempre reventaba contra la restricción.
+    id_restaurante: int
 
 class UsuarioResponse(BaseModel):
     id_usuario: int
+    id_restaurante: int
     nombre: str
     correo: EmailStr
     rol: str

@@ -5,6 +5,9 @@ from App.DataBase.connection import get_db
 from App.Models.asistencia import Asistencia, EstadoAsistencia
 from App.Schemas.asistencia import AsistenciaCreate, AsistenciaResponse
 
+from App.Models.usuario import Usuario
+from App.Core.security import obtener_usuario_actual
+
 router = APIRouter(prefix="/api/asistencias", tags=["Asistencias"])
 
 
@@ -36,7 +39,11 @@ def listar_asistencias_de_mesa(id_mesa: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{id_asistencia}/atender", response_model=AsistenciaResponse)
-def marcar_atendido(id_asistencia: int, db: Session = Depends(get_db)):
+def marcar_atendido(
+    id_asistencia: int,
+    db: Session = Depends(get_db),
+    usuario_actual: Usuario = Depends(obtener_usuario_actual),
+):
     item = db.query(Asistencia).filter(Asistencia.id_asistencia == id_asistencia).first()
     if not item:
         raise HTTPException(status_code=404, detail="Asistencia no encontrada")

@@ -152,6 +152,14 @@ CREATE TABLE pagos (
 );
 CREATE INDEX ix_pagos_id_restaurante ON pagos(id_restaurante);
 
+-- Un pago puede cubrir varios pedidos: es lo que pasa cuando la caja cobra la
+-- mesa completa. `pagos.id_pedido` es UNIQUE y solo alcanza para uno, así que
+-- el vínculo con toda la cuenta se guarda del lado del pedido.
+-- Va como ALTER porque `pedidos` se crea antes que `pagos`.
+ALTER TABLE pedidos
+    ADD COLUMN id_pago INTEGER REFERENCES pagos(id_pago) ON DELETE SET NULL;
+CREATE INDEX ix_pedidos_id_pago ON pedidos(id_pago);
+
 
 -- ====================================================================
 -- 4. POBLADO INICIAL MULTI-TENANT (SEMILLAS DE DATOS)

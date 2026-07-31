@@ -20,7 +20,19 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 def verificar_contrasena(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+    """
+    Compara la contraseña contra el hash guardado.
+
+    El poblado inicial de `supabase_schema.sql` dejó contraseñas en texto plano
+    ('fisi2025'). passlib no reconoce eso como hash y lanza excepción, así que
+    el login devolvía un 500 en vez de un 401 y nunca llegó a usarse. Aquí se
+    trata como credencial inválida: para arreglarlo hay que rehashear los
+    usuarios con `python crear_staff.py`.
+    """
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception:
+        return False
 
 def obtener_hash_contrasena(password):
     return pwd_context.hash(password)

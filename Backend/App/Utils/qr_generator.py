@@ -1,5 +1,6 @@
 import qrcode
 import os
+from App.Core.config import FRONTEND_URL
 
 # Carpeta donde se guardarán las imágenes QR
 QR_DIRECTORY = "App/Static/QRs"
@@ -11,9 +12,10 @@ def generar_qr_mesa(id_mesa: int) -> str:
     """
     Genera un QR para una mesa específica y devuelve la ruta web de la imagen.
     """
-    # Esta es la URL a la que el cliente irá cuando escanee el QR con su cámara
-    # Cambiaremos esto cuando el frontend esté listo
-    url_mesa = f"http://localhost:5173/mesa/{id_mesa}"
+    # URL a la que llega el comensal al escanear el QR con su cámara.
+    # Sale de FRONTEND_URL (.env) para que el QR impreso sirva también fuera
+    # de la máquina de desarrollo.
+    url_mesa = f"{FRONTEND_URL}/mesa/{id_mesa}"
     
     # Configurar la estética del QR
     qr = qrcode.QRCode(

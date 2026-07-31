@@ -2,22 +2,18 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { QrCode, Shield, X, ChevronRight } from 'lucide-react'
 import { useToast } from '../components/Toast'
-import { getMesas } from '../services/api'
+import { getMesas, loginStaff } from '../services/api'
 import { aplicarAcento } from '../theme/sala'
-
-/* Accesos de demostración del panel, uno por restaurante. */
-const ACCESOS_STAFF = {
-  '1234': { id: 1, nombre: 'La Fogata' },
-  '4321': { id: 2, nombre: 'Pizzería Italia' }
-}
 
 export default function SelectorRol() {
   const navigate = useNavigate()
   const { toast } = useToast()
 
-  // Qué está mostrando la pantalla: la portada, el selector de mesa o el PIN del personal.
+  // Qué está mostrando la pantalla: la portada, el selector de mesa o el acceso del personal.
   const [vista, setVista] = useState('inicio')
-  const [pinPersonal, setPinPersonal] = useState('')
+  const [correo, setCorreo] = useState('')
+  const [contrasena, setContrasena] = useState('')
+  const [entrando, setEntrando] = useState(false)
   const [intentosError, setIntentosError] = useState(false)
   const [mesas, setMesas] = useState([])
   const [cargandoMesas, setCargandoMesas] = useState(false)
@@ -42,23 +38,25 @@ export default function SelectorRol() {
     return () => { vivo = false }
   }, [vista])
 
-  const handleEntrarComoPersonal = (e) => {
+  const handleEntrarComoPersonal = async (e) => {
     e.preventDefault()
-    const acceso = ACCESOS_STAFF[pinPersonal]
+    if (entrando) return
+    setEntrando(true)
 
-    if (!acceso) {
+    try {
+      // El restaurante ya no se deduce de un PIN cableado: lo dice el token.
+      const sesion = await loginStaff(correo.trim(), contrasena)
+      aplicarAcento(sesion.id_restaurante)
+      toast(`Bienvenido al panel de ${sesion.nombre_restaurante}`, 'success')
+      navigate('/logistica')
+    } catch (err) {
       setIntentosError(true)
-      setPinPersonal('')
-      toast('PIN incorrecto. Inténtalo de nuevo.', 'error')
+      setContrasena('')
+      toast(err.message, 'error')
       setTimeout(() => setIntentosError(false), 2000)
-      return
+    } finally {
+      setEntrando(false)
     }
-
-    localStorage.setItem('swifttable_id_restaurante', String(acceso.id))
-    localStorage.setItem('swifttable_nombre_restaurante', acceso.nombre)
-    aplicarAcento(acceso.id)
-    toast(`Bienvenido al panel de ${acceso.nombre}`, 'success')
-    navigate('/logistica')
   }
 
   return (
@@ -192,45 +190,50 @@ export default function SelectorRol() {
                 type="button"
                 className="st-back"
                 style={{ width: 32, height: 32 }}
-                onClick={() => { setVista('inicio'); setPinPersonal('') }}
+                onClick={() => { setVista('inicio'); setCorreo(''); setContrasena('') }}
                 aria-label="Volver"
               >
                 <X size={17} strokeWidth={2.4} />
               </button>
             </div>
 
-            <h2 className="st-h2" style={{ fontSize: 22 }}>Tu PIN de empleado</h2>
+            <h2 className="st-h2" style={{ fontSize: 22 }}>Inicia sesión</h2>
+
+            <input
+              type="email"
+              placeholder="tu@restaurante.com"
+              value={correo}
+              onChange={e => setCorreo(e.target.value)}
+              autoFocus
+              autoComplete="username"
+              required
+              className="st-input"
+              style={{ borderColor: intentosError ? '#FF6B76' : 'var(--st-border)' }}
+            />
 
             <input
               type="password"
-              inputMode="numeric"
-              maxLength={4}
-              placeholder="••••"
-              value={pinPersonal}
-              onChange={e => setPinPersonal(e.target.value.replace(/\D/g, ''))}
-              autoFocus
-              style={{
-                width: '100%',
-                padding: 16,
-                letterSpacing: '14px',
-                textIndent: '14px',
-                textAlign: 'center',
-                borderRadius: 'var(--st-r-md)',
-                background: 'var(--st-bg)',
-                border: `2px solid ${intentosError ? '#FF6B76' : 'var(--st-border)'}`,
-                color: 'var(--st-text-1)',
-                fontFamily: 'var(--st-display)',
-                fontSize: 26,
-                fontWeight: 800,
-                outline: 'none',
-                transition: 'border-color 0.15s ease'
-              }}
+              placeholder="Contraseña"
+              value={contrasena}
+              onChange={e => setContrasena(e.target.value)}
+              autoComplete="current-password"
+              required
+              className="st-input"
+              style={{ borderColor: intentosError ? '#FF6B76' : 'var(--st-border)' }}
             />
 
-            <p className="st-label" style={{ textAlign: 'center' }}>PIN de demostración: 1234 o 4321</p>
+            {/* Sin respaldo local a propósito: un mock aquí sería otra vez un
+                acceso cableado. Si el backend está apagado, no se entra. */}
+            <p className="st-label" style={{ textAlign: 'center' }}>
+              Necesitas el backend encendido para entrar al panel.
+            </p>
 
-            <button type="submit" className="st-btn st-btn--primary st-btn--sm" disabled={pinPersonal.length < 4}>
-              Entrar al panel
+            <button
+              type="submit"
+              className="st-btn st-btn--primary st-btn--sm"
+              disabled={entrando || !correo.trim() || !contrasena}
+            >
+              {entrando ? 'Entrando…' : 'Entrar al panel'}
             </button>
           </form>
         )}
