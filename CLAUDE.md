@@ -45,6 +45,7 @@ Backend/
   App/Core/security.py     bcrypt + JWT + obtener_usuario_actual (dependencia de auth)
   App/Utils/               qr_generator.py, pin_generator.py
   crear_staff.py           rehashea las contraseñas del personal a bcrypt
+  generar_qr_mesas.py      crea los QR que falten · --regenerar si cambia FRONTEND_URL
   migraciones_sql/         cambios de esquema incrementales, se pegan en Supabase
   alembic/versions/        ⚠ DESACTUALIZADO, no refleja el esquema real
 Frontend/src/
@@ -185,5 +186,13 @@ El ciclo pedir → cocina → servir → cobrar funciona de punta a punta.
    porque las contraseñas del poblado están en texto plano y `auth.py` usa bcrypt.
    Credenciales resultantes: `admin@lafogata.com` / `fisi2025` y
    `admin@pizzaitalia.com` / `italia2025`.
-3. Para desplegar, poner `FRONTEND_URL` en el `.env` del backend: si no, los QR
-   impresos apuntan a `localhost:5173`.
+3. `python generar_qr_mesas.py` — el poblado inserta las mesas sin `codigo_qr`
+   (el QR es un PNG, no un dato del SQL), así que sin esto salen con
+   "Sin QR generado" en `/admin`.
+4. Para desplegar, poner `FRONTEND_URL` en el `.env` del backend **antes** de
+   generar los QR: la URL va codificada dentro de la imagen, así que si cambia
+   hay que rehacerlos con `python generar_qr_mesas.py --regenerar`.
+
+Si la base es un proyecto de Supabase nuevo, basta con pegar `supabase_schema.sql`
+entero: ya incluye la columna `id_pago`, así que el paso 1 sobra (esa migración
+es solo para una base que venga del esquema viejo).
