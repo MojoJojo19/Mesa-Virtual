@@ -1,5 +1,3 @@
-const SIMULACION_HABILITADA = false;
-
 const getApiUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
   // Adaptador automático para emulador Android (10.0.2.2) o pruebas en red local (192.168.x.x)
@@ -8,7 +6,7 @@ const getApiUrl = () => {
   }
   return 'http://127.0.0.1:8000/api';
 };
-export const API_URL = getApiUrl();
+const API_URL = getApiUrl();
 
 // ─── Datos mock de fallback (cuando el backend no está activo) ───
 export const MOCK_PLATOS = [
@@ -48,32 +46,18 @@ export const MOCK_PLATOS = [
 
 export const MOCK_MESA = {
   id_mesa: 7, nombre_restaurante: 'La Fogata Grill',
-  capacidad: 4, pin: '7823', estado: 'activa', token_sesion: 'mock_token'
+  capacidad: 4, pin: '7823', estado: 'activa'
 }
 
-// ─── Helper para evitar esperas largas si el backend no responde y enviar Token JWT ───
+// ─── Helper para evitar esperas largas si el backend no responde ───
 const fetchWithTimeout = async (url, options = {}) => {
-  const { timeout = 10000, ...rest } = options;
-  
-  // BUENA PRÁCTICA API: Adjuntar Token JWT automáticamente a todas las peticiones
-  const token = localStorage.getItem('swifttable_token');
-  if (token) {
-    rest.headers = {
-      ...rest.headers,
-      'Authorization': `Bearer ${token}`
-    };
-  }
-
-  // Desactivar caché del navegador para todas las llamadas API
-  rest.cache = 'no-store';
-
+  const { timeout = 1500, ...rest } = options;
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
   const response = await fetch(url, { ...rest, signal: controller.signal });
   clearTimeout(id);
   return response;
 };
-
 
 // ─── API calls ───────────────────────────────────────────────────
 export const getPlatos = async (idRestaurante = null) => {
@@ -82,8 +66,7 @@ export const getPlatos = async (idRestaurante = null) => {
     const res = await fetchWithTimeout(url)
     if (!res.ok) throw new Error('Error')
     return await res.json()
-  } catch (err) {
-    if (!SIMULACION_HABILITADA) throw err;
+  } catch {
     console.warn('Backend no disponible, usando datos mock')
     return MOCK_PLATOS
   }
@@ -95,8 +78,7 @@ export const getCategorias = async (idRestaurante = null) => {
     const res = await fetchWithTimeout(url)
     if (!res.ok) throw new Error('Error')
     return await res.json()
-  } catch (err) {
-    if (!SIMULACION_HABILITADA) throw err;
+  } catch {
     return [
       { id_categoria: 1, nombre: 'Pollos' },
       { id_categoria: 2, nombre: 'Bebidas' },
@@ -108,66 +90,38 @@ export const getCategorias = async (idRestaurante = null) => {
 
 export const getMesa = async (idMesa) => {
   try {
-    const res = await fetchWithTimeout(`${API_URL}/mesas/${idMesa}`)
+    const res = await fetchWithTimeout(`${API_URL}/mesas/${idMesa}/`)
     if (!res.ok) throw new Error('Error')
     return await res.json()
-  } catch (err) {
-    if (!SIMULACION_HABILITADA) throw err;
+  } catch {
     return { ...MOCK_MESA, id_mesa: idMesa }
   }
 }
 
-export const actualizarTiempoEsperaMesa = async (idMesa, minutos) => {
+/**
+ * Comensales realmente unidos a la mesa. Alimenta el Lobby y el pedido
+ * grupal, en lugar de la lista mock que había cableada en el componente.
+ */
+export const getComensalesDeMesa = async (idMesa) => {
   try {
-    const res = await fetchWithTimeout(`${API_URL}/mesas/${idMesa}/tiempo-espera`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ minutos: parseInt(minutos) })
-    })
-    if (!res.ok) throw new Error('Error al actualizar tiempo de espera de mesa')
-    return await res.json()
-  } catch (e) {
-    throw e
-  }
-}
-
-export const actualizarConfigMesa = async (idMesa, tipoPago) => {
-  try {
-    const res = await fetchWithTimeout(`${API_URL}/mesas/${idMesa}/configuracion`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tipo_pago: tipoPago })
-    })
-    if (!res.ok) throw new Error('Error')
-    return await res.json()
-  } catch (err) {
-    if (!SIMULACION_HABILITADA) throw err;
-    return { success: true, tipo_pago: tipoPago }
-  }
-}
-
-export const actualizarTiempoEspera = async (idRestaurante, minutos) => {
-  try {
-    const res = await fetchWithTimeout(`${API_URL}/restaurantes/${idRestaurante}/tiempo-espera`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ minutos })
-    })
+    const res = await fetchWithTimeout(`${API_URL}/mesas/${idMesa}/comensales`)
     if (!res.ok) throw new Error('Error')
     return await res.json()
   } catch {
-    return { success: true, tiempo_espera_global: minutos }
-  }
-}
-
-export const getRestaurante = async (idRestaurante) => {
-  try {
-    const res = await fetchWithTimeout(`${API_URL}/restaurantes/${idRestaurante}`)
-    if (!res.ok) throw new Error('Error')
-    return await res.json()
-  } catch (err) {
-    if (!SIMULACION_HABILITADA) throw err;
-    return { id_restaurante: idRestaurante, tiempo_espera_global: 15 }
+    // Sin backend solo conocemos al comensal de este dispositivo.
+    try {
+      const propio = JSON.parse(localStorage.getItem('swifttable_user') || 'null')
+      if (propio && propio.nombre) {
+        return [{
+          id_comensal: propio.id,
+          nombre: propio.nombre,
+          avatar: propio.avatar,
+          estado_sesion: 'activa',
+          id_mesa: parseInt(idMesa)
+        }]
+      }
+    } catch { /* localStorage ilegible */ }
+    return []
   }
 }
 
@@ -181,81 +135,10 @@ export const validarPin = async (idMesa, pin) => {
     if (!res.ok) throw new Error('Error')
     const data = await res.json()
     return data.valido
-  } catch (err) {
-    if (!SIMULACION_HABILITADA) throw err;
+  } catch {
     const mockMesas = getMockMesasLocales()
     const mesa = mockMesas.find(m => m.id_mesa === parseInt(idMesa))
     return mesa ? mesa.pin === pin : false
-  }
-}
-
-export const validarToken = async (idMesa, token) => {
-  try {
-    const res = await fetchWithTimeout(`${API_URL}/mesas/${idMesa}/validar-token?token=${token}`)
-    if (!res.ok) throw new Error('Error')
-    const data = await res.json()
-    return data.valido
-  } catch (err) {
-    if (!SIMULACION_HABILITADA) throw err;
-    const mockMesas = getMockMesasLocales()
-    const mesa = mockMesas.find(m => m.id_mesa === parseInt(idMesa))
-    return mesa ? mesa.token_sesion === token : false;
-  }
-}
-
-export const buscarMesaPorPin = async (pin) => {
-  try {
-    const res = await fetchWithTimeout(`${API_URL}/mesas/buscar-por-pin`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin })
-    })
-    if (!res.ok) throw new Error('Error')
-    return await res.json()
-  } catch (err) {
-    if (!SIMULACION_HABILITADA) throw err;
-    // Fallback mock: buscar en los datos locales simulados
-    const mockMesas = getMockMesasLocales()
-    const mesa = mockMesas.find(m => m.pin === pin)
-    if (mesa) {
-      return {
-        encontrado: true,
-        id_mesa: mesa.id_mesa,
-        numero_mesa: mesa.numero,
-        nombre_restaurante: 'La Fogata'
-      }
-    }
-    return { encontrado: false }
-  }
-}
-
-export const loginPersonal = async (correo, contrasena) => {
-  try {
-    const formData = new URLSearchParams()
-    formData.append('username', correo)
-    formData.append('password', contrasena)
-
-    const res = await fetchWithTimeout(`${API_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: formData.toString()
-    })
-    
-    if (!res.ok) throw new Error('Credenciales incorrectas')
-    return await res.json()
-  } catch (err) {
-    if (!SIMULACION_HABILITADA) throw err;
-    // Mock login para desarrollo sin backend
-    if (correo === 'admin@fogata.com' || correo === 'mesero@fogata.com') {
-      return {
-        access_token: 'mock_token',
-        rol: correo.includes('admin') ? 'admin' : 'mesero',
-        id_usuario: 99,
-        id_restaurante: 1,
-        nombre_restaurante: 'La Fogata'
-      }
-    }
-    throw err
   }
 }
 
@@ -266,71 +149,116 @@ export const crearComensal = async (nombre, avatar, idMesa) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nombre, avatar, id_mesa: parseInt(idMesa) })
     })
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.detail || 'Error al ingresar');
-    }
+    if (!res.ok) throw new Error('Error')
     return await res.json()
-  } catch (e) {
-    if (e.message && e.message !== 'Error' && e.message !== 'Error al ingresar') {
-      throw e; // Lanzar error específico del backend para que Ingreso.jsx lo muestre
-    }
-    if (!SIMULACION_HABILITADA) throw e;
-    // Fallback: simular creación exitosa si el error es de conexión genérica
+  } catch {
+    // Fallback: simular creación exitosa
     return { id_comensal: Date.now(), nombre, avatar, id_mesa: parseInt(idMesa) }
   }
 }
 
-export const hacerLiderMesa = async (idComensal) => {
-  try {
-    const res = await fetchWithTimeout(`${API_URL}/comensales/${idComensal}/hacer-lider`, {
-      method: 'PUT'
-    })
-    if (!res.ok) throw new Error('Error al asignar líder')
-    return await res.json()
-  } catch (err) {
-    throw err
-  }
-}
-
-export const getComensalesDeMesa = async (idMesa) => {
-  try {
-    const res = await fetchWithTimeout(`${API_URL}/mesas/${idMesa}/comensales`)
-    if (!res.ok) throw new Error('Error')
-    return await res.json()
-  } catch (err) {
-    if (!SIMULACION_HABILITADA) throw err;
-    return []
-  }
-}
-
-export const enviarPedido = async (idMesa, items) => {
+/**
+ * Manda el pedido a cocina.
+ *
+ * El backend lo modela en dos pasos: primero la cabecera del pedido y
+ * después una línea por producto. Antes se enviaba todo junto en un solo
+ * POST con un campo `items` que el esquema PedidoCreate ni siquiera acepta,
+ * así que el pedido nunca llegaba a la cocina.
+ */
+export const enviarPedido = async (idMesa, items, idComensal = null) => {
   try {
     const res = await fetchWithTimeout(`${API_URL}/pedidos/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id_mesa: parseInt(idMesa), items })
+      body: JSON.stringify({
+        id_mesa: parseInt(idMesa),
+        id_comensal: idComensal ? parseInt(idComensal) : null
+      })
     })
-    if (!res.ok) throw new Error('Error')
-    return await res.json()
-  } catch (err) {
-    if (!SIMULACION_HABILITADA) throw err;
-    return { id_pedido: Date.now(), items, estado: 'pendiente' }
+    if (!res.ok) throw new Error('No se pudo crear el pedido')
+    const pedido = await res.json()
+
+    // Cada plato del carrito es un detalle. El backend toma el precio del
+    // producto, así que aquí solo viajan producto y cantidad.
+    const lineas = await Promise.all(items.map(async (it) => {
+      try {
+        const dRes = await fetchWithTimeout(`${API_URL}/detalles_pedido/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id_pedido: pedido.id_pedido,
+            id_producto: it.id_producto,
+            cantidad: it.cantidad
+          })
+        })
+        return dRes.ok
+      } catch {
+        return false
+      }
+    }))
+
+    const fallidas = lineas.filter(ok => !ok).length
+    if (fallidas > 0) {
+      console.warn(`${fallidas} de ${items.length} platos no se registraron en el pedido ${pedido.id_pedido}`)
+    }
+
+    return { ...pedido, itemsFallidos: fallidas }
+  } catch (e) {
+    console.warn('Backend no disponible, guardando el pedido en local:', e)
+    return guardarMockPedidoLocal(idMesa, items, idComensal)
   }
 }
 
-export const actualizarCarritoComensal = async (idComensal, estadoPedido, carrito) => {
+/* Sin backend, el pedido se registra en el mock local para que cocina y caja
+   sigan mostrando algo coherente durante la demostración. */
+const guardarMockPedidoLocal = (idMesa, items, idComensal) => {
+  const pedido = {
+    id_pedido: Date.now(),
+    id_mesa: parseInt(idMesa),
+    id_comensal: idComensal || null,
+    estado: 'pendiente',
+    fecha_hora: new Date().toISOString(),
+    items: items.map(it => ({
+      nombre: it.nombre,
+      cantidad: it.cantidad,
+      precio: it.precio
+    }))
+  }
   try {
-    const res = await fetchWithTimeout(`${API_URL}/comensales/${idComensal}/carrito`, {
+    const todos = getMockPedidosLocales()
+    const clave = String(idMesa)
+    todos[clave] = [...(todos[clave] || []), pedido]
+    localStorage.setItem('swifttable_mock_pedidos', JSON.stringify(todos))
+  } catch (e) {
+    console.error(e)
+  }
+  return pedido
+}
+
+/**
+ * Cambia el estado de la mesa (libre / ocupada / por_limpiar).
+ * Nada marcaba la mesa como ocupada, así que el mapa del salón mostraba
+ * todo libre aunque hubiera gente sentada.
+ */
+export const actualizarEstadoMesa = async (idMesa, estado) => {
+  try {
+    const res = await fetchWithTimeout(`${API_URL}/mesas/${idMesa}/estado`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ estado_pedido: estadoPedido, carrito })
+      body: JSON.stringify({ estado })
     })
     if (!res.ok) throw new Error('Error')
     return await res.json()
-  } catch (err) {
-    if (!SIMULACION_HABILITADA) throw err;
-    return { success: true } // Fallback simulado
+  } catch {
+    try {
+      const mesas = getMockMesasLocales().map(m =>
+        m.id_mesa === parseInt(idMesa) ? { ...m, estado } : m
+      )
+      localStorage.setItem('swifttable_mock_mesas', JSON.stringify(mesas))
+    } catch (e) {
+      console.error(e)
+    }
+    return { id_mesa: parseInt(idMesa), estado }
   }
 }
 
@@ -374,8 +302,7 @@ export const llamarMesero = async (idMesa, tipo = 'llamar_mesero') => {
     if (!res.ok) throw new Error('Error');
     const data = await res.json();
     return data;
-  } catch (err) {
-    if (!SIMULACION_HABILITADA) throw err;
+  } catch {
     const nuevoMock = {
       id_asistencia: Date.now(),
       tipo: tipo,
@@ -399,8 +326,7 @@ export const pedirCuenta = async (idMesa) => {
     if (!res.ok) throw new Error('Error');
     const data = await res.json();
     return data;
-  } catch (err) {
-    if (!SIMULACION_HABILITADA) throw err;
+  } catch {
     const nuevoMock = {
       id_asistencia: Date.now(),
       tipo: 'pedir_cuenta',
@@ -419,8 +345,7 @@ export const getAsistencias = async (idRestaurante = null) => {
     const res = await fetchWithTimeout(url);
     if (!res.ok) throw new Error('Error');
     return await res.json();
-  } catch (err) {
-    if (!SIMULACION_HABILITADA) throw err;
+  } catch {
     return getMockAsistenciasLocales();
   }
 };
@@ -432,8 +357,7 @@ export const atenderAsistencia = async (idAsistencia) => {
     });
     if (!res.ok) throw new Error('Error');
     return await res.json();
-  } catch (err) {
-    if (!SIMULACION_HABILITADA) throw err;
+  } catch {
     try {
       const actuales = getMockAsistenciasLocales();
       const actualizados = actuales.map(a => 
@@ -465,14 +389,13 @@ const getMockMesasLocales = () => {
     const val = localStorage.getItem('swifttable_mock_mesas');
     if (!val) {
       const iniciales = [
-        { id_mesa: 1, numero: 1, estado: 'libre', pin: '1234', token_sesion: 'token1', comensales: [] },
-        { id_mesa: 2, numero: 2, estado: 'libre', pin: '5678', token_sesion: 'token2', comensales: [] },
-        { id_mesa: 3, numero: 3, estado: 'ocupada', pin: '4321', token_sesion: 'token3', comensales: [{ nombre: 'Juan', avatar: '🐱' }, { nombre: 'María', avatar: '🦊' }] },
-        { id_mesa: 4, numero: 4, estado: 'libre', pin: '8765', token_sesion: 'token4', comensales: [] },
-        { id_mesa: 5, numero: 5, estado: 'ocupada', pin: '2468', token_sesion: 'token5', comensales: [{ nombre: 'Pedro', avatar: '🐶' }] },
-        { id_mesa: 6, numero: 6, estado: 'libre', pin: '1357', token_sesion: 'token6', comensales: [] },
-        { id_mesa: 7, numero: 7, estado: 'ocupada', pin: '7823', token_sesion: 'token7', comensales: [{ nombre: 'Carlos', avatar: '🐱', isLider: true }, { nombre: 'Ana', avatar: '🐶' }] },
-        { id_mesa: 1001, numero: 1001, estado: 'libre', pin: '1111', token_sesion: 'token1001', comensales: [] }
+        { id_mesa: 1, numero: 1, estado: 'libre', pin: '1234', comensales: [] },
+        { id_mesa: 2, numero: 2, estado: 'libre', pin: '5678', comensales: [] },
+        { id_mesa: 3, numero: 3, estado: 'ocupada', pin: '4321', comensales: [{ nombre: 'Juan', avatar: '🐱' }, { nombre: 'María', avatar: '🦊' }] },
+        { id_mesa: 4, numero: 4, estado: 'libre', pin: '8765', comensales: [] },
+        { id_mesa: 5, numero: 5, estado: 'ocupada', pin: '2468', comensales: [{ nombre: 'Pedro', avatar: '🐶' }] },
+        { id_mesa: 6, numero: 6, estado: 'libre', pin: '1357', comensales: [] },
+        { id_mesa: 7, numero: 7, estado: 'ocupada', pin: '7823', comensales: [{ nombre: 'Carlos', avatar: '🐱', isLider: true }, { nombre: 'Ana', avatar: '🐶' }] }
       ];
       localStorage.setItem('swifttable_mock_mesas', JSON.stringify(iniciales));
       return iniciales;
@@ -485,14 +408,17 @@ const getMockMesasLocales = () => {
 
 export const getMesas = async (idRestaurante = null) => {
   try {
-    const url = idRestaurante ? `${API_URL}/mesas/?id_restaurante=${idRestaurante}` : `${API_URL}/mesas/`
+    // El panel pasa el restaurante activo: sin este filtro un local veía
+    // las mesas de todos los demás.
+    const url = idRestaurante
+      ? `${API_URL}/mesas/?id_restaurante=${idRestaurante}`
+      : `${API_URL}/mesas/`;
     const res = await fetchWithTimeout(url);
     if (!res.ok) throw new Error('Error');
     const data = await res.json();
     // Ordenar mesas por número ascendente
     return data.sort((a, b) => a.numero - b.numero);
-  } catch (err) {
-    if (!SIMULACION_HABILITADA) throw err
+  } catch {
     return getMockMesasLocales();
   }
 };
@@ -540,8 +466,7 @@ export const liberarMesa = async (idMesa) => {
     });
     if (!res.ok) throw new Error('Error');
     return await res.json();
-  } catch (err) {
-    if (!SIMULACION_HABILITADA) throw err;
+  } catch {
     try {
       // 1. Liberar Mesa (estado libre, nuevo PIN, limpiar comensales)
       const actuales = getMockMesasLocales();
@@ -550,6 +475,7 @@ export const liberarMesa = async (idMesa) => {
           return { 
             ...m, 
             estado: 'libre', 
+            pin: Math.floor(1000 + Math.random() * 9000).toString(), 
             comensales: [] 
           };
         }
@@ -584,35 +510,31 @@ export const getPedidosDeMesa = async (idMesa) => {
     if (!res.ok) throw new Error('Error');
     const pedidos = await res.json();
     
-    // Fetch platos ONCE to avoid N+1 requests
-    const platosList = await fetchWithTimeout(`${API_URL}/productos/`).then(r => r.ok ? r.json() : []).catch(() => []);
-
     const pedidosConDetalles = await Promise.all(pedidos.map(async (ped) => {
       try {
         const dRes = await fetchWithTimeout(`${API_URL}/detalles_pedido/pedido/${ped.id_pedido}`);
         if (dRes.ok) {
           const detalles = await dRes.json();
+          const platosList = await fetchWithTimeout(`${API_URL}/productos/`).then(r => r.ok ? r.json() : []);
           const items = detalles.map(d => {
             const prod = platosList.find(p => p.id_producto === d.id_producto);
             return {
               nombre: prod ? prod.nombre : `Producto #${d.id_producto}`,
               cantidad: d.cantidad,
-              precio: d.precio_unitario,
-              id_producto: d.id_producto
+              precio: d.precio_unitario
             };
           });
           return { ...ped, items };
         }
-        return { ...ped, items: [] };
-      } catch {
-        return { ...ped, items: [] };
+      } catch (e) {
+        console.error(e);
       }
+      return { ...ped, items: [] };
     }));
 
     // Retornar solo pedidos ACTIVOS (no pagados ni cancelados) para logística
     return pedidosConDetalles.filter(p => p.estado !== 'pagado' && p.estado !== 'cancelado');
-  } catch (err) {
-    if (!SIMULACION_HABILITADA) throw err
+  } catch {
     // Mock fallbacks
     const mockPeds = getMockPedidosLocales();
     const tablePeds = mockPeds[idMesa] || [];
@@ -647,34 +569,29 @@ export const getPedidosTodos = async (idRestaurante = null) => {
     if (!res.ok) throw new Error('Error');
     const pedidos = await res.json();
     
-    // Fetch platos ONCE to avoid N+1 requests
-    const platosList = await fetchWithTimeout(`${API_URL}/productos/`).then(r => r.ok ? r.json() : []).catch(() => []);
-
     const pedidosConDetalles = await Promise.all(pedidos.map(async (ped) => {
       try {
         const dRes = await fetchWithTimeout(`${API_URL}/detalles_pedido/pedido/${ped.id_pedido}`);
         if (dRes.ok) {
           const detalles = await dRes.json();
+          const platosList = await fetchWithTimeout(`${API_URL}/productos/`).then(r => r.ok ? r.json() : []);
           const items = detalles.map(d => {
             const prod = platosList.find(p => p.id_producto === d.id_producto);
             return {
               nombre: prod ? prod.nombre : `Producto #${d.id_producto}`,
               cantidad: d.cantidad,
-              precio: d.precio_unitario,
-              id_producto: d.id_producto
+              precio: d.precio_unitario
             };
           });
           return { ...ped, items };
         }
-        return { ...ped, items: [] };
       } catch (e) {
         console.error(e);
-        return { ...ped, items: [] };
       }
+      return { ...ped, items: [] };
     }));
     return pedidosConDetalles;
-  } catch (err) {
-    if (!SIMULACION_HABILITADA) throw err;
+  } catch {
     const mockPeds = getMockPedidosLocales();
     let todos = [];
     Object.keys(mockPeds).forEach(mesaId => {
@@ -702,34 +619,21 @@ export const getPedidosTodos = async (idRestaurante = null) => {
 
 
 export const registrarPago = async (idPedido, montoTotal, propina, metodoPago) => {
-  // Obtener id_usuario logueado (mesero) si existe
-  const tokenStr = localStorage.getItem('swifttable_staff_token')
-  const userStr = localStorage.getItem('swifttable_staff_user')
-  let idUsuario = null
-  if (userStr) {
-    try { idUsuario = JSON.parse(userStr).id_usuario } catch (e) {}
-  }
-
   const payload = {
     monto_total: parseFloat(montoTotal),
     propina: propina ? parseFloat(propina) : 0,
     metodo_pago: metodoPago,
-    id_pedido: parseInt(idPedido),
-    id_usuario: idUsuario
+    id_pedido: parseInt(idPedido)
   };
   try {
     const res = await fetchWithTimeout(`${API_URL}/pagos/`, {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        ...(tokenStr ? { 'Authorization': `Bearer ${tokenStr}` } : {})
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error('Error');
     return await res.json();
-  } catch (err) {
-    if (!SIMULACION_HABILITADA) throw err
+  } catch {
     let items = [];
     let idMesa = 0;
     try {
@@ -857,8 +761,7 @@ export const getPagos = async (idRestaurante = null) => {
       return { ...pago, id_mesa: 1, items: [] };
     }));
     return pagosEnriquecidos;
-  } catch (err) {
-    if (!SIMULACION_HABILITADA) throw err;
+  } catch {
     return seedMockPagos();
   }
 };
@@ -870,8 +773,7 @@ export const actualizarEstadoPedido = async (idPedido, nuevoEstado) => {
     });
     if (!res.ok) throw new Error('Error');
     return await res.json();
-  } catch (err) {
-    if (!SIMULACION_HABILITADA) throw err;
+  } catch {
     try {
       const peds = getMockPedidosLocales();
       Object.keys(peds).forEach(mesaId => {

@@ -1,75 +1,133 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ChevronLeft } from 'lucide-react'
+import { User, Equal, HandHeart, Check } from 'lucide-react'
+import { getComensalesDeMesa } from '../services/api'
+import TopBar from '../components/TopBar'
 
 const MODOS = [
-  { id: 'individual', titulo: 'Pago Individual', desc: 'Cada uno elige sus platos y paga lo suyo' },
-  { id: 'partes_iguales', titulo: 'Partes Iguales', desc: 'Pedimos de todo y dividimos la cuenta entre todos' },
-  { id: 'lider', titulo: 'Asumir como Líder', desc: 'Yo invito. Pagaré la cuenta total de la mesa' }
+  {
+    id: 'individual',
+    titulo: 'Cada uno lo suyo',
+    desc: 'Pagas solo lo que pediste',
+    icono: User,
+    color: 'var(--st-cyan)',
+    reparto: () => 'lo que pida'
+  },
+  {
+    id: 'partes_iguales',
+    titulo: 'Partes iguales',
+    desc: 'Pedimos de todo y dividimos la cuenta',
+    icono: Equal,
+    color: 'var(--st-lime)',
+    reparto: (_, total) => `1/${total} de la cuenta`
+  },
+  {
+    id: 'lider',
+    titulo: 'Yo invito',
+    desc: 'Pagas la cuenta completa de la mesa',
+    icono: HandHeart,
+    color: 'var(--st-amber)',
+    reparto: (esAnfitrion) => (esAnfitrion ? 'paga todo' : 'no paga')
+  }
 ]
 
 export default function ModoPago() {
   const { idMesa } = useParams()
   const navigate = useNavigate()
+
+  const user = JSON.parse(localStorage.getItem('swifttable_user') || '{}')
   const [modoSeleccionado, setModoSeleccionado] = useState(null)
+  const [comensales, setComensales] = useState([])
+
+  useEffect(() => {
+    let vivo = true
+    getComensalesDeMesa(idMesa).then(lista => {
+      if (vivo) setComensales(lista.filter(c => c.estado_sesion !== 'inactiva'))
+    })
+    return () => { vivo = false }
+  }, [idMesa])
 
   const handleContinuar = () => {
     if (!modoSeleccionado) return
-    const userData = JSON.parse(localStorage.getItem('swifttable_user') || '{}')
     localStorage.setItem('swifttable_user', JSON.stringify({
-      ...userData, 
-      modoPago: modoSeleccionado, 
-      isLider: true // El que configura el pago siempre es el líder de la mesa
+      ...user,
+      modoPago: modoSeleccionado,
+      isLider: true // Quien configura el pago queda como anfitrión de la mesa.
     }))
     navigate(`/mesa/${idMesa}/menu`)
   }
 
-  const restName = localStorage.getItem('swifttable_nombre_restaurante') || 'SwiftTable'
+  const modoActivo = MODOS.find(m => m.id === modoSeleccionado)
+  const personas = comensales.length || 1
 
   return (
-    <>
-      <div className="native-app-bar">
-        <div className="left-action">
-          <button className="wf-btn-ghost" onClick={() => navigate(-1)} style={{ padding: 0 }}>
-            <ChevronLeft size={28} color="var(--accent)" />
+    <div className="st-screen">
+      <TopBar
+        meta={`Mesa ${idMesa} · ${personas} ${personas === 1 ? 'persona' : 'personas'}`}
+        onBack={() => navigate(-1)}
+      />
+
+      <div className="st-body" style={{ paddingTop: 22 }}>
+        <h1 className="st-h1">¿Cómo pagan hoy?</h1>
+        <p className="st-lead" style={{ marginTop: 6 }}>Se puede cambiar antes de cerrar la cuenta.</p>
+
+        <div style={{ marginTop: 22, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {MODOS.map(modo => {
+            const activo = modoSeleccionado === modo.id
+            const Icono = modo.icono
+            return (
+              <button
+                key={modo.id}
+                type="button"
+                aria-pressed={activo}
+                className={`st-option ${activo ? 'st-option--on' : ''}`}
+                style={activo ? { background: modo.color } : undefined}
+                onClick={() => setModoSeleccionado(modo.id)}
+              >
+                <span className="st-option__icon">
+                  <Icono size={26} strokeWidth={2.3} color={activo ? 'var(--st-ink)' : modo.color} />
+                </span>
+
+                <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+                  <span className="st-option__title">{modo.titulo}</span>
+                  <span className="st-option__desc">{modo.desc}</span>
+                </span>
+
+                <span className="st-radio">
+                  {activo && <Check size={15} strokeWidth={3.4} color={modo.color} />}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Previsualización: qué le toca a cada uno con el modo elegido */}
+        {modoActivo && comensales.length > 0 && (
+          <div
+            className="st-card st-pop"
+            style={{ marginTop: 20, background: 'rgba(35,213,224,0.12)', border: 'none', gap: 8, display: 'flex', flexDirection: 'column' }}
+          >
+            <div className="st-label" style={{ color: '#7fd8e0' }}>Cómo quedaría</div>
+            {comensales.map(c => (
+              <div
+                key={c.id_comensal}
+                style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 14, fontWeight: 600 }}
+              >
+                <span>{c.nombre}{c.id_comensal === user.id ? ' (tú)' : ''}</span>
+                <span style={{ color: 'var(--st-text-2)' }}>
+                  {modoActivo.reparto(c.id_comensal === user.id, personas)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="st-footer">
+          <button className="st-btn st-btn--primary" onClick={handleContinuar} disabled={!modoSeleccionado}>
+            Ir al menú
           </button>
         </div>
-        <div className="title">{restName}</div>
-        <div className="right-action"></div>
       </div>
-
-      <div className="content-wrapper">
-        <div style={{ margin: '16px 0 32px' }}>
-          <h1 className="title-large">¿Cómo pagarán hoy?</h1>
-          <p className="subtitle">Elige cómo se dividirá la cuenta de la mesa.</p>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {MODOS.map((modo) => (
-            <div 
-              key={modo.id}
-              className={`pago-option ${modoSeleccionado === modo.id ? 'selected' : ''}`}
-              onClick={() => setModoSeleccionado(modo.id)}
-            >
-              <div style={{ flex: 1, paddingRight: '16px' }}>
-                <div style={{ fontSize: '17px', fontWeight: '600', marginBottom: '4px' }}>{modo.titulo}</div>
-                <div style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.3 }}>{modo.desc}</div>
-              </div>
-              <div className="pago-option-radio" />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="native-bottom-bar">
-        <button 
-          className="wf-btn-solid" 
-          onClick={handleContinuar}
-          disabled={!modoSeleccionado}
-        >
-          Continuar al Menú
-        </button>
-      </div>
-    </>
+    </div>
   )
 }

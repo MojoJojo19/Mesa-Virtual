@@ -1,26 +1,29 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Flame, Shield, Delete, X, AlertCircle } from 'lucide-react'
+import { QrCode, Shield, X, ChevronRight } from 'lucide-react'
 import { useToast } from '../components/Toast'
-import { buscarMesaPorPin, loginPersonal } from '../services/api'
+import { getMesas } from '../services/api'
+import { aplicarAcento } from '../theme/sala'
+
+/* Accesos de demostración del panel, uno por restaurante. */
+const ACCESOS_STAFF = {
+  '1234': { id: 1, nombre: 'La Fogata' },
+  '4321': { id: 2, nombre: 'Pizzería Italia' }
+}
 
 export default function SelectorRol() {
   const navigate = useNavigate()
   const { toast } = useToast()
 
-  // ── Estado principal ──────────────────────────────────────────────────────
-  const [pin, setPin] = useState('')
-  const [buscando, setBuscando] = useState(false)
-  const [pinError, setPinError] = useState(false)
+  // Qué está mostrando la pantalla: la portada, el selector de mesa o el PIN del personal.
+  const [vista, setVista] = useState('inicio')
+  const [pinPersonal, setPinPersonal] = useState('')
+  const [intentosError, setIntentosError] = useState(false)
+  const [mesas, setMesas] = useState([])
+  const [cargandoMesas, setCargandoMesas] = useState(false)
 
-  // ── Estado del panel de Personal ──────────────────────────────────────────
-  const [mostrarPanelStaff, setMostrarPanelStaff] = useState(false)
-  const [correo, setCorreo] = useState('')
-  const [contrasena, setContrasena] = useState('')
-  const [staffError, setStaffError] = useState(false)
-
-  // ── Limpiar caché de desarrollo (solo primera vez) ────────────────────────
-  React.useEffect(() => {
+  useEffect(() => {
+    // Limpieza única de caché antigua de desarrollo.
     if (!localStorage.getItem('swifttable_v2_clean')) {
       localStorage.clear()
       localStorage.setItem('swifttable_v2_clean', 'true')
@@ -28,382 +31,210 @@ export default function SelectorRol() {
     }
   }, [])
 
-  // ── Lógica del teclado de PIN de mesa ─────────────────────────────────────
-  const handlePadClick = async (num) => {
-    if (buscando) return
-    const newPin = pin + num
-    setPin(newPin)
-    setPinError(false)
+  useEffect(() => {
+    if (vista !== 'cliente') return
+    let vivo = true
+    setCargandoMesas(true)
+    getMesas()
+      .then(data => { if (vivo) setMesas(data || []) })
+      .catch(() => { if (vivo) setMesas([]) })
+      .finally(() => { if (vivo) setCargandoMesas(false) })
+    return () => { vivo = false }
+  }, [vista])
 
-    if (newPin.length === 4) {
-      setBuscando(true)
-      try {
-        const result = await buscarMesaPorPin(newPin)
-        if (result.encontrado) {
-          if (result.nombre_restaurante) {
-            localStorage.setItem('swifttable_nombre_restaurante', result.nombre_restaurante)
-          }
-          toast(`¡Mesa ${result.numero_mesa} encontrada! Ingresando...`, 'success')
-          setTimeout(() => {
-            navigate(`/mesa/${result.id_mesa}/ingreso`)
-          }, 400)
-        } else {
-          setPinError(true)
-          toast('PIN no válido. Revisa el número en el centro de tu mesa.', 'error')
-          setTimeout(() => {
-            setPin('')
-            setPinError(false)
-          }, 1200)
-        }
-      } catch {
-        setPinError(true)
-        toast('Error de conexión. Inténtalo de nuevo.', 'error')
-        setTimeout(() => { setPin(''); setPinError(false) }, 1200)
-      } finally {
-        setBuscando(false)
-      }
-    }
-  }
-
-  const handleDelete = () => {
-    if (buscando) return
-    setPin(prev => prev.slice(0, -1))
-    setPinError(false)
-  }
-
-  // ── Lógica del panel de Personal (Modo Libre / Sin contraseña) ────────────
-  const handleEntrarComoPersonal = async (e) => {
+  const handleEntrarComoPersonal = (e) => {
     e.preventDefault()
-    
-    // Determinar restaurante basado en el correo escrito
-    const esPizza = correo.toLowerCase().includes('pizza') || correo.toLowerCase().includes('italia')
-    const idRestaurante = esPizza ? 2 : 1
-    const nombreRest = esPizza ? 'Pizzería Italia' : 'La Fogata'
-    
-    localStorage.setItem('swifttable_staff_token', 'mock_free_token')
-    localStorage.setItem('swifttable_staff_user', JSON.stringify({
-      id_usuario: esPizza ? 2 : 1,
-      rol: 'admin',
-      correo: correo || (esPizza ? 'admin@pizzaitalia.com' : 'admin@lafogata.com')
-    }))
-    localStorage.setItem('swifttable_id_restaurante', idRestaurante)
-    localStorage.setItem('swifttable_nombre_restaurante', nombreRest)
-    
-    toast(`Acceso Concedido (Modo Libre) — ${nombreRest}`, 'success')
+    const acceso = ACCESOS_STAFF[pinPersonal]
+
+    if (!acceso) {
+      setIntentosError(true)
+      setPinPersonal('')
+      toast('PIN incorrecto. Inténtalo de nuevo.', 'error')
+      setTimeout(() => setIntentosError(false), 2000)
+      return
+    }
+
+    localStorage.setItem('swifttable_id_restaurante', String(acceso.id))
+    localStorage.setItem('swifttable_nombre_restaurante', acceso.nombre)
+    aplicarAcento(acceso.id)
+    toast(`Bienvenido al panel de ${acceso.nombre}`, 'success')
     navigate('/logistica')
   }
 
-  // ── Render: Panel Staff (modal/overlay compacto) ───────────────────────────
-  if (mostrarPanelStaff) {
-    return (
-      <>
-        <div className="native-app-bar" style={{ background: 'transparent', border: 'none' }}>
-          <div className="left-action" />
-          <div className="title" style={{ color: 'var(--text-1)' }} />
-          <div className="right-action" />
+  return (
+    <div className="st-screen">
+      <div
+        className="st-glow"
+        style={{ top: -80, right: -60, width: 260, height: 260, background: 'var(--st-accent)', opacity: 0.35 }}
+      />
+
+      <div className="st-body" style={{ paddingTop: 'calc(40px + var(--safe-top))' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div
+            className="st-tile"
+            style={{
+              width: 66, height: 66, borderRadius: 22, margin: '0 auto 16px',
+              background: 'var(--st-lime)', color: 'var(--st-ink)', fontSize: 34,
+              boxShadow: '0 6px 0 var(--st-lime-deep)'
+            }}
+          >
+            S
+          </div>
+          <h1 className="st-h1" style={{ fontSize: 40 }}>SwiftTable</h1>
+          <p className="st-label" style={{ marginTop: 6 }}>Pedidos de mesa, sin app y sin esperas</p>
         </div>
 
-        <div className="content-wrapper flex-col" style={{ padding: '0 24px 32px', justifyContent: 'center' }}>
-
-          {/* Logo pequeño */}
-          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-            <div style={{
-              width: '60px', height: '60px', borderRadius: '18px',
-              background: 'linear-gradient(135deg, var(--blue, #3b82f6), #6366f1)',
-              color: 'white',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 14px',
-              boxShadow: '0 10px 20px rgba(59, 130, 246, 0.25)'
-            }}>
-              <Shield size={28} strokeWidth={2.5} />
-            </div>
-            <h1 style={{ fontSize: '22px', fontWeight: '800', color: 'var(--text-1)', marginBottom: '4px' }}>
-              Acceso Personal
-            </h1>
-            <p style={{ fontSize: '13px', color: 'var(--text-3)', fontWeight: '500' }}>
-              Ingresa tus credenciales
-            </p>
-          </div>
-
-          {/* Formulario */}
-          <form onSubmit={handleEntrarComoPersonal} className="card" style={{
-            padding: '24px', borderRadius: '20px',
-            background: 'var(--surface)', border: '1.5px solid var(--border)'
-          }}>
-            <div style={{ marginBottom: '16px' }}>
-              <input
-                type="email"
-                placeholder="Correo electrónico"
-                value={correo}
-                autoFocus
-                onChange={(e) => setCorreo(e.target.value)}
-                style={{
-                  width: '100%', padding: '14px', borderRadius: '12px',
-                  background: 'var(--bg)', border: '2px solid var(--border)',
-                  color: 'var(--text-1)', fontSize: '15px', outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              />
-            </div>
-            <div style={{ marginBottom: '20px', position: 'relative' }}>
-              <input
-                type="password"
-                placeholder="Contraseña"
-                value={contrasena}
-                onChange={(e) => setContrasena(e.target.value)}
-                style={{
-                  width: '100%', padding: '14px', borderRadius: '12px',
-                  background: staffError ? 'var(--red-bg, #fef2f2)' : 'var(--bg)',
-                  border: staffError ? '2px solid var(--red, #ef4444)' : '2px solid var(--border)',
-                  color: 'var(--text-1)', fontSize: '15px', outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              />
-              {staffError && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px', color: 'var(--red, #ef4444)', fontSize: '13px', fontWeight: '600' }}>
-                  <AlertCircle size={14} /> Credenciales inválidas
-                </div>
-              )}
-              <span style={{ fontSize: '11px', color: 'var(--text-3)', display: 'block', textAlign: 'center', marginTop: '8px' }}>
-                La Fogata: admin@lafogata.com (fisi2025) | Pizzería Italia: admin@pizzaitalia.com (italia2025)
+        {vista === 'inicio' ? (
+          <div style={{ marginTop: 34, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <button
+              className="st-card st-pop"
+              onClick={() => setVista('cliente')}
+              style={{
+                display: 'flex', flexDirection: 'column', gap: 12, textAlign: 'left',
+                cursor: 'pointer', color: 'var(--st-text-1)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span
+                  className="st-tile"
+                  style={{ width: 48, height: 48, borderRadius: 15, background: 'var(--st-accent)', color: '#fff' }}
+                >
+                  <QrCode size={24} strokeWidth={2.2} />
+                </span>
+                <ChevronRight size={22} color="var(--st-border-2)" />
+              </div>
+              <span className="st-h2" style={{ fontSize: 21 }}>¿Vienes a comer?</span>
+              <span className="st-lead" style={{ fontSize: 14.5 }}>
+                Normalmente entras escaneando el QR de tu mesa. Si ya estás sentado, también puedes elegirla aquí.
               </span>
-            </div>
+            </button>
 
             <button
-              type="submit"
-              className="wf-btn-solid"
-              style={{ width: '100%', padding: '14px', fontSize: '15px', borderRadius: '12px', margin: 0, background: 'var(--blue, #3b82f6)', boxShadow: 'none' }}
+              className="st-card st-pop"
+              onClick={() => setVista('staff')}
+              style={{
+                display: 'flex', flexDirection: 'column', gap: 12, textAlign: 'left',
+                cursor: 'pointer', color: 'var(--st-text-1)', animationDelay: '0.1s'
+              }}
             >
-              Ingresar al Panel
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span
+                  className="st-tile"
+                  style={{ width: 48, height: 48, borderRadius: 15, background: 'var(--st-violet)', color: '#fff' }}
+                >
+                  <Shield size={24} strokeWidth={2.2} />
+                </span>
+                <ChevronRight size={22} color="var(--st-border-2)" />
+              </div>
+              <span className="st-h2" style={{ fontSize: 21 }}>Trabajo aquí</span>
+              <span className="st-lead" style={{ fontSize: 14.5 }}>
+                Panel de salón, pantalla de cocina y caja registradora.
+              </span>
+            </button>
+          </div>
+        ) : vista === 'cliente' ? (
+          <div className="st-card st-pop" style={{ marginTop: 34, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="st-label" style={{ color: 'var(--st-accent)' }}>Elige tu mesa</span>
+              <button
+                type="button"
+                className="st-back"
+                style={{ width: 32, height: 32 }}
+                onClick={() => setVista('inicio')}
+                aria-label="Volver"
+              >
+                <X size={17} strokeWidth={2.4} />
+              </button>
+            </div>
+
+            <h2 className="st-h2" style={{ fontSize: 22 }}>¿En qué mesa estás?</h2>
+            <p className="st-lead" style={{ fontSize: 14 }}>
+              Después te pedimos el PIN de 4 dígitos que está en el centro de la mesa.
+            </p>
+
+            {cargandoMesas ? (
+              <div className="st-empty">Buscando mesas…</div>
+            ) : mesas.length === 0 ? (
+              <div className="st-empty">No hay mesas configuradas en este local.</div>
+            ) : (
+              <div className="st-tables">
+                {mesas.map(m => {
+                  const ocupada = m.estado === 'ocupada'
+                  return (
+                    <button
+                      key={m.id_mesa}
+                      className={`st-mesa ${ocupada ? 'st-mesa--ocupada' : 'st-mesa--libre'}`}
+                      onClick={() => navigate(`/mesa/${m.id_mesa}`)}
+                      aria-label={`Entrar a la mesa ${m.numero}`}
+                    >
+                      <span className="st-mesa__n">M{m.numero}</span>
+                      <span
+                        className="st-mesa__estado"
+                        style={{ color: ocupada ? 'var(--st-cyan)' : 'var(--st-lime)' }}
+                      >
+                        {ocupada ? 'Con gente' : 'Libre'}
+                      </span>
+                      {/* El PIN solo viaja en los datos de prueba: con backend real no se expone. */}
+                      {m.pin && (
+                        <span className="st-label" style={{ marginTop: 3, fontSize: 9 }}>PIN {m.pin}</span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        ) : (
+          <form onSubmit={handleEntrarComoPersonal} className="st-card st-pop" style={{ marginTop: 34, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="st-label" style={{ color: '#c9b4ff' }}>Acceso del personal</span>
+              <button
+                type="button"
+                className="st-back"
+                style={{ width: 32, height: 32 }}
+                onClick={() => { setVista('inicio'); setPinPersonal('') }}
+                aria-label="Volver"
+              >
+                <X size={17} strokeWidth={2.4} />
+              </button>
+            </div>
+
+            <h2 className="st-h2" style={{ fontSize: 22 }}>Tu PIN de empleado</h2>
+
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              placeholder="••••"
+              value={pinPersonal}
+              onChange={e => setPinPersonal(e.target.value.replace(/\D/g, ''))}
+              autoFocus
+              style={{
+                width: '100%',
+                padding: 16,
+                letterSpacing: '14px',
+                textIndent: '14px',
+                textAlign: 'center',
+                borderRadius: 'var(--st-r-md)',
+                background: 'var(--st-bg)',
+                border: `2px solid ${intentosError ? '#FF6B76' : 'var(--st-border)'}`,
+                color: 'var(--st-text-1)',
+                fontFamily: 'var(--st-display)',
+                fontSize: 26,
+                fontWeight: 800,
+                outline: 'none',
+                transition: 'border-color 0.15s ease'
+              }}
+            />
+
+            <p className="st-label" style={{ textAlign: 'center' }}>PIN de demostración: 1234 o 4321</p>
+
+            <button type="submit" className="st-btn st-btn--primary st-btn--sm" disabled={pinPersonal.length < 4}>
+              Entrar al panel
             </button>
           </form>
-
-          {/* Volver */}
-          <button
-            onClick={() => { setMostrarPanelStaff(false); setPinPersonal('') }}
-            style={{
-              marginTop: '20px', background: 'transparent', border: 'none',
-              color: 'var(--text-3)', fontSize: '14px', cursor: 'pointer',
-              fontWeight: '600', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', gap: '6px'
-            }}
-          >
-            <X size={16} /> Cancelar
-          </button>
-        </div>
-      </>
-    )
-  }
-
-  // ── Render principal: PIN de mesa ─────────────────────────────────────────
-  return (
-    <>
-      <div className="native-app-bar" style={{ background: 'transparent', border: 'none', backdropFilter: 'none' }}>
-        <div className="left-action" />
-        <div className="title" style={{ color: 'var(--text-1)' }} />
-        <div className="right-action" />
+        )}
       </div>
-
-      <div className="content-wrapper flex-col" style={{ padding: '0 24px 32px', marginTop: '-12px' }}>
-
-        {/* Logo + Marca */}
-        <div style={{ textAlign: 'center', marginBottom: '28px', marginTop: '8px' }}>
-          <div style={{
-            width: '68px', height: '68px', borderRadius: '20px',
-            background: 'linear-gradient(135deg, var(--accent), var(--accent-2))',
-            color: 'white',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 14px',
-            boxShadow: '0 10px 22px rgba(225, 77, 42, 0.28)'
-          }}>
-            <Flame size={34} strokeWidth={2.5} />
-          </div>
-          <h1 style={{ fontSize: '30px', letterSpacing: '-0.03em', color: 'var(--text-1)', fontWeight: '800', marginBottom: '2px' }}>
-            SwiftTable
-          </h1>
-          <p style={{ fontSize: '12px', color: 'var(--text-3)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            Sistema de Mesa Virtual
-          </p>
-        </div>
-
-        {/* Bloque PIN */}
-        <div className="card animate-fade-in" style={{
-          padding: '28px 20px',
-          borderRadius: '24px',
-          background: 'var(--surface)',
-          border: '1.5px solid var(--border)',
-          boxShadow: '0 16px 40px -12px rgba(0,0,0,0.06)',
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center'
-        }}>
-          <p style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>
-            Ingresa el PIN de tu mesa
-          </p>
-          <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '24px', textAlign: 'center', lineHeight: 1.5 }}>
-            Encuéntralo en el centro o al costado de la mesa.
-          </p>
-
-          {/* Dots de PIN */}
-          <div style={{ display: 'flex', gap: '16px', marginBottom: '28px' }}>
-            {[0, 1, 2, 3].map(i => (
-              <div
-                key={i}
-                style={{
-                  width: '18px', height: '18px',
-                  borderRadius: '50%',
-                  transition: 'all 0.15s ease',
-                  background: pinError
-                    ? 'var(--red, #ef4444)'
-                    : i < pin.length
-                      ? 'var(--accent)'
-                      : 'var(--border)',
-                  transform: i < pin.length ? 'scale(1.15)' : 'scale(1)',
-                  boxShadow: i < pin.length && !pinError
-                    ? '0 0 0 4px rgba(225,77,42,0.15)'
-                    : 'none'
-                }}
-              />
-            ))}
-          </div>
-
-          {/* Teclado numérico */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '10px',
-            width: '100%',
-            maxWidth: '260px'
-          }}>
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
-              <button
-                key={num}
-                onClick={() => pin.length < 4 && handlePadClick(num.toString())}
-                disabled={buscando || pin.length >= 4}
-                style={{
-                  padding: '18px 0',
-                  borderRadius: '14px',
-                  border: '1.5px solid var(--border)',
-                  background: 'var(--bg)',
-                  color: 'var(--text-1)',
-                  fontSize: '22px',
-                  fontWeight: '700',
-                  cursor: buscando || pin.length >= 4 ? 'not-allowed' : 'pointer',
-                  fontFamily: 'inherit',
-                  transition: 'all 0.1s ease',
-                  opacity: buscando ? 0.5 : 1,
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
-                }}
-                onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.94)'; e.currentTarget.style.background = 'var(--surface-2)' }}
-                onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'var(--bg)' }}
-                onTouchStart={e => { e.currentTarget.style.transform = 'scale(0.94)'; e.currentTarget.style.background = 'var(--surface-2)' }}
-                onTouchEnd={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'var(--bg)' }}
-              >
-                {num}
-              </button>
-            ))}
-
-            {/* Fila inferior: vacío | 0 | borrar */}
-            <div />
-            <button
-              onClick={() => pin.length < 4 && handlePadClick('0')}
-              disabled={buscando || pin.length >= 4}
-              style={{
-                padding: '18px 0',
-                borderRadius: '14px',
-                border: '1.5px solid var(--border)',
-                background: 'var(--bg)',
-                color: 'var(--text-1)',
-                fontSize: '22px',
-                fontWeight: '700',
-                cursor: buscando || pin.length >= 4 ? 'not-allowed' : 'pointer',
-                fontFamily: 'inherit',
-                transition: 'all 0.1s ease',
-                opacity: buscando ? 0.5 : 1,
-                boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
-              }}
-              onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.94)'; e.currentTarget.style.background = 'var(--surface-2)' }}
-              onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'var(--bg)' }}
-              onTouchStart={e => { e.currentTarget.style.transform = 'scale(0.94)'; e.currentTarget.style.background = 'var(--surface-2)' }}
-              onTouchEnd={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'var(--bg)' }}
-            >
-              0
-            </button>
-            <button
-              onClick={handleDelete}
-              disabled={buscando || pin.length === 0}
-              style={{
-                padding: '18px 0',
-                borderRadius: '14px',
-                border: '1.5px solid var(--border)',
-                background: 'var(--surface-2)',
-                color: 'var(--text-2)',
-                fontSize: '18px',
-                cursor: buscando || pin.length === 0 ? 'not-allowed' : 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                opacity: buscando || pin.length === 0 ? 0.4 : 1,
-                transition: 'all 0.1s ease',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
-              }}
-            >
-              <Delete size={20} />
-            </button>
-          </div>
-
-          {/* Spinner mientras busca */}
-          {buscando && (
-            <div style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-3)', fontSize: '13px', fontWeight: '600' }}>
-              <div style={{
-                width: '16px', height: '16px',
-                border: '2px solid var(--border)',
-                borderTop: '2px solid var(--accent)',
-                borderRadius: '50%',
-                animation: 'spin 0.8s linear infinite'
-              }} />
-              Buscando mesa...
-              <style>{`@keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }`}</style>
-            </div>
-          )}
-        </div>
-
-        {/* Separador + Enlace de Personal — discreto pero visible */}
-        <div style={{ marginTop: '24px', textAlign: 'center' }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '10px',
-            color: 'var(--text-3)', fontSize: '12px', marginBottom: '16px'
-          }}>
-            <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
-            <span style={{ fontWeight: '600', letterSpacing: '0.03em' }}>o</span>
-            <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
-          </div>
-
-          <button
-            onClick={() => { setMostrarPanelStaff(true); setPin('') }}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '7px',
-              color: 'var(--text-2)',
-              fontSize: '14px',
-              fontWeight: '700',
-              fontFamily: 'inherit',
-              padding: '8px 16px',
-              borderRadius: '10px',
-              transition: 'color 0.15s, background 0.15s'
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.color = 'var(--text-1)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-2)' }}
-          >
-            <Shield size={16} strokeWidth={2} />
-            Soy Personal del Restaurante
-          </button>
-        </div>
-
-      </div>
-    </>
+    </div>
   )
 }
