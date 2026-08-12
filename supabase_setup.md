@@ -23,7 +23,7 @@ Una vez creado el proyecto en Supabase, sigue estos pasos para inicializar el es
 
 1. En el panel izquierdo de Supabase, entra al menú **SQL Editor** (representado por el ícono `SQL`).
 2. Haz clic en **New Query**.
-3. Abre el archivo [supabase_schema.sql](file:///c:/Users/USUARIO/Desktop/Mesa-Virtual/supabase_schema.sql) que hemos creado en la raíz de tu proyecto, copia todo su contenido y pégalo en el editor de consultas SQL de Supabase.
+3. Abre el archivo [supabase_schema.sql](./supabase_schema.sql) que hemos creado en la raíz de tu proyecto, copia todo su contenido y pégalo en el editor de consultas SQL de Supabase.
 4. Haz clic en el botón **Run** (Ejecutar) en la esquina superior derecha.
 5. Deberías ver un mensaje indicando que la consulta se ejecutó con éxito (`Success. No rows returned` y las tablas pobladas). 
 6. Puedes verificar que todo esté en orden entrando al menú **Table Editor** en el panel izquierdo; verás las 9 tablas (`mesas`, `pedidos`, `productos`, etc.) llenas con los datos iniciales listos para operar.
@@ -45,13 +45,13 @@ Una vez creado el proyecto en Supabase, sigue estos pasos para inicializar el es
 
 ## Paso 4: Configurar la Variable de Entorno en el Backend
 
-El backend en Python lee la base de datos a través de la variable de entorno `DATABASE_URL` (según se define en [config.py](file:///c:/Users/USUARIO/Desktop/Mesa-Virtual/Backend/App/Core/config.py)).
+El backend en Python lee la base de datos a través de la variable de entorno `DATABASE_URL` (según se define en [config.py](./Backend/App/Core/config.py)).
 
 1. Ve a la carpeta del backend: `Backend/`.
 2. Crea un archivo de configuración llamado `.env` si no existe.
 3. Añade la variable `DATABASE_URL` configurando la URI de conexión que copiaste en el paso anterior:
    ```env
-   DATABASE_URL=postgresql://postgres:Gammasan170204*@db.jrgsoswdicpbrdnwyqem.supabase.co:5432/postgres
+   DATABASE_URL=postgresql://postgres:[tu_password]@[tu_host_supabase]:5432/postgres
    ```
    *(Asegúrate de agregar `?sslmode=require` al final si utilizas conexión encriptada SSL obligatoria de Supabase).*
 
