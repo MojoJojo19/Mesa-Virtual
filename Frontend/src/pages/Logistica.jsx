@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Bell, FileText, ChevronLeft, RefreshCw, CheckCircle, Clock, Plus, Volume2, VolumeX,
-  X, Users, Utensils, ChefHat, ConciergeBell, Receipt, DollarSign, Snowflake, Sparkles
+  X, Users, Utensils, ChefHat, ConciergeBell, Receipt, DollarSign, Snowflake, Sparkles, BarChart3
 } from 'lucide-react'
 import {
   getAsistencias, atenderAsistencia, simularLlamadoDesdePanel, getMesas, liberarMesa,
@@ -10,11 +10,13 @@ import {
 } from '../services/api'
 import { useToast } from '../components/Toast'
 import { colorComensal, inicial } from '../theme/sala'
+import Metricas from './Metricas'
 
 const MODOS = [
   { id: 'salon',  label: 'Salón',  icono: ConciergeBell },
   { id: 'cocina', label: 'Cocina', icono: ChefHat },
-  { id: 'caja',   label: 'Caja',   icono: Receipt }
+  { id: 'caja',   label: 'Caja',   icono: Receipt },
+  { id: 'metricas', label: 'Métricas', icono: BarChart3 }
 ]
 
 const FILTROS = [
@@ -932,6 +934,14 @@ export default function Logistica() {
         {vistaModo === 'salon' && renderSalon()}
         {vistaModo === 'cocina' && renderCocina()}
         {vistaModo === 'caja' && renderCaja()}
+        {vistaModo === 'metricas' && (
+          <Metricas
+            idRestaurante={idRestaurante}
+            pagos={pagos}
+            todosPedidos={todosPedidos}
+            mesas={mesas}
+          />
+        )}
       </div>
 
       {renderDetalleMesa()}

@@ -1,5 +1,6 @@
-from typing import List, Optional
+from typing import Optional, List
 from pydantic import BaseModel
+from App.Schemas.comensal import ComensalResponse
 
 class MesaCreate(BaseModel):
     numero: int
@@ -7,16 +8,7 @@ class MesaCreate(BaseModel):
 class RestauranteMini(BaseModel):
     id_restaurante: int
     nombre: str
-
-    class Config:
-        from_attributes = True
-
-class ComensalMini(BaseModel):
-    """Lo mínimo para pintar a un comensal en el mapa del salón."""
-    id_comensal: int
-    nombre: str
-    avatar: Optional[str] = None
-    estado_sesion: str
+    tiempo_espera_global: int = 15
 
     class Config:
         from_attributes = True
@@ -26,14 +18,22 @@ class MesaResponse(BaseModel):
     id_restaurante: int
     numero: int
     estado: str
+    pin: Optional[str] = None
+    tipo_pago: Optional[str] = None
     codigo_qr: Optional[str] = None
+    token_sesion: Optional[str] = None
+    tiempo_espera_adicional: int = 0
     restaurante: Optional[RestauranteMini] = None
-    # El panel necesita saber quién está sentado: sin esto el mapa de mesas
-    # y el detalle de la mesa salían siempre vacíos.
-    comensales: List[ComensalMini] = []
+    comensales: Optional[List[ComensalResponse]] = None
 
     class Config:
         from_attributes = True
+
+class MesaConfigUpdate(BaseModel):
+    tipo_pago: str
+
+class MesaTiempoUpdate(BaseModel):
+    minutos: int
 
 class MesaCreateResponse(MesaResponse):
     # Este sí incluye el pin: solo se devuelve una vez, justo al crear la
@@ -48,3 +48,17 @@ class ValidarPinResponse(BaseModel):
 
 class MesaEstadoUpdate(BaseModel):
     estado: str
+
+
+# ── Búsqueda de mesa por PIN (acceso manual desde la pantalla de inicio) ──────
+class BuscarPorPinRequest(BaseModel):
+    pin: str
+
+class BuscarPorPinResponse(BaseModel):
+    encontrado: bool
+    id_mesa: Optional[int] = None
+    numero_mesa: Optional[int] = None
+    nombre_restaurante: Optional[str] = None
+
+    class Config:
+        from_attributes = True
